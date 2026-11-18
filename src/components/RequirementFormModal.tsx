@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Save, PlusCircle, Lock, Code2, UserRound, ClipboardList, CalendarClock } from 'lucide-react';
+import { X, Save, PlusCircle, Lock, Code2, UserRound, ClipboardList } from 'lucide-react';
 import {
   CORE_FUNCTIONS,
   DEFAULT_CORE_FUNCTION,
@@ -47,14 +47,6 @@ interface RequirementFormModalProps {
   onAddDeveloper: (name: string) => Promise<void>;
 }
 
-/** Value for <input type="datetime-local"> in the user's local time. */
-function toLocalInput(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(
-    date.getMinutes()
-  )}`;
-}
-
 const label = 'block text-sm font-semibold text-slate-700 mb-1.5';
 
 export default function RequirementFormModal({
@@ -79,7 +71,6 @@ export default function RequirementFormModal({
   const [module, setModule] = useState('');
   const [details, setDetails] = useState('');
   const [requestedBy, setRequestedBy] = useState('');
-  const [requestDate, setRequestDate] = useState(toLocalInput(new Date()));
   const [status, setStatus] = useState<RequirementStatusType>('New');
   const [devAssigned, setDevAssigned] = useState('');
   const [images, setImages] = useState<RequirementImage[]>([]);
@@ -116,7 +107,6 @@ export default function RequirementFormModal({
       setModule(initialData.module);
       setDetails(initialData.details);
       setRequestedBy(initialData.requested_by);
-      setRequestDate(toLocalInput(new Date(initialData.request_date)));
       setStatus(initialData.status);
       setDevAssigned(initialData.dev_assigned || '');
       setImages(initialData.images);
@@ -129,7 +119,6 @@ export default function RequirementFormModal({
       setModule(presets?.module || firstModuleOf(core) || 'General');
       setDetails('');
       setRequestedBy(team.some((t) => t.name === rememberedName) ? rememberedName : team[0]?.name || '');
-      setRequestDate(toLocalInput(new Date())); // the moment the requirement is opened
       setStatus(presets?.status || 'New');
       setDevAssigned('');
       setImages([]);
@@ -166,7 +155,7 @@ export default function RequirementFormModal({
           module: module || 'General',
           details: details.trim(),
           requested_by: requestedBy,
-          request_date: new Date(requestDate || toLocalInput(new Date())).toISOString(),
+          request_date: initialData ? initialData.request_date : new Date().toISOString(),
           status,
           dev_assigned: devAssigned || null,
         },
@@ -239,7 +228,7 @@ export default function RequirementFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-3xl w-full border border-line shadow-pop overflow-hidden my-8 max-h-[92vh] flex flex-col">
+      <div className="bg-white rounded-2xl max-w-5xl w-full border border-line shadow-pop overflow-hidden my-8 max-h-[92vh] flex flex-col">
         <div className="bg-gradient-to-r from-jiffy-navy to-[#0a5fc4] p-5 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="h-10 w-10 rounded-xl bg-jiffy-yellow text-jiffy-ink flex items-center justify-center shadow-card">
@@ -283,7 +272,6 @@ export default function RequirementFormModal({
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="สรุปหัวข้อความต้องการสั้นกระชับ เช่น สแกน Weight Barcode 13 หลัก"
                 className="field font-semibold"
                 maxLength={255}
                 required
@@ -381,7 +369,7 @@ export default function RequirementFormModal({
 
           {/* Details */}
           <div>
-            <label className={label}>รายละเอียดความต้องการ / User Story / Acceptance Criteria</label>
+            <label className={label}>รายละเอียดความต้องการ / User Requirement</label>
             <textarea
               rows={5}
               value={details}
@@ -425,16 +413,6 @@ export default function RequirementFormModal({
                   ))}
                 </select>
               )}
-              <label className="block text-sm font-semibold text-amber-900 mt-3 mb-1.5 inline-flex items-center gap-1.5">
-                <CalendarClock className="w-4 h-4" aria-hidden />
-                วันที่-เวลาที่เปิด Requirement
-              </label>
-              <input
-                type="datetime-local"
-                value={requestDate}
-                onChange={(e) => setRequestDate(e.target.value)}
-                className="field"
-              />
             </div>
 
             <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200">
@@ -472,7 +450,6 @@ export default function RequirementFormModal({
                   ))}
                 </select>
               )}
-              <p className="text-xs text-indigo-800/80 mt-2">รายชื่อ Dev แยกจากรายชื่อ Tester เพิ่มได้จากปุ่มด้านบน</p>
             </div>
           </div>
 

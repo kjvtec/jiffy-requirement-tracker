@@ -443,7 +443,7 @@ export default function RequirementDetailModal({
           {/* Details */}
           <div className="space-y-2">
             <SectionTitle icon={FileText} tone="bg-gradient-to-br from-sky-400 to-blue-600">
-              รายละเอียดความต้องการ / User Story / Acceptance Criteria
+              รายละเอียดความต้องการ / User Requirement
             </SectionTitle>
             <div className="p-4 bg-white border border-line rounded-xl whitespace-pre-wrap leading-relaxed text-slate-800">
               {requirement.details || 'ไม่มีรายละเอียดเพิ่มเติม'}

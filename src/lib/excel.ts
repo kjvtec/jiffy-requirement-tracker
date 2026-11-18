@@ -559,7 +559,7 @@ export async function exportRequirementsToExcel(
       { label: 'สถานะงาน (Status)', value: r.status, highlight: statusStyle },
       { label: 'Dev ผู้รับผิดชอบ (Dev Assigned)', value: r.dev_assigned || '-' },
       { label: 'ผู้ขอ (Requested By)', value: `${r.requested_by || '-'} (${formatDateTimeTh(r.request_date)})` },
-      { label: 'รายละเอียดความต้องการ / Acceptance Criteria', value: r.details || '-', multiline: true },
+      { label: 'รายละเอียดความต้องการ / User Requirement', value: r.details || '-', multiline: true },
       {
         label: 'ขอข้อมูลเพิ่ม (Dev → ผู้ขอ)',
         value:
