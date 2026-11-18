@@ -1,0 +1,40 @@
+[
+  {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "req_id": "JFY-REQ-01",
+    "title": "รองรับการสแกน Barcode สินค้าแบบชั่งน้ำหนัก (Weight Barcode 13 หลัก)",
+    "priority": "1.High",
+    "type": "New Feature",
+    "core_function": "VTec POS",
+    "module": "Sale / Checkout",
+    "details": "ต้องการให้หน้าจอขาย POS สามารถสแกนบาร์โค้ด EAN-13 ของสินค้าประเภทชั่งน้ำหนัก (ขึ้นต้นด้วย 20-29) โดยแยกถอดรหัสรหัสสินค้า (Item Code 5 หลัก) และน้ำหนัก/ราคา (5 หลัก) เพื่อคำนวณยอดเงินรวมได้อัตโนมัติ ไม่ต้องคีย์มือน้ำหนักซ้ำ",
+    "requested_by": "Nat",
+    "request_date": "2026-11-18T03:00:00Z",
+    "status": "In Development",
+    "dev_assigned": "Kampon",
+    "target_version": "v1.2.0",
+    "remark": "ทดสอบ Logic การตัด Prefix บาร์โค้ดและทดสอบกับเครื่องสแกนหน้าร้าน",
+    "created_at": "2026-11-18T03:00:00Z",
+    "updated_at": "2026-11-18T03:00:00Z",
+    "images": []
+  },
+  {
+    "id": "22222222-2222-2222-2222-222222222222",
+    "req_id": "JFY-REQ-02",
+    "title": "เพิ่มปุ่มคัดลอกเลขที่เอกสารในหน้ารายงานสินค้าขาด (Stock Shortage)",
+    "priority": "2.Medium",
+    "type": "Enhancement",
+    "core_function": "VTec Store Backoffice",
+    "module": "Report",
+    "details": "เพิ่มปุ่ม Copy เลขที่ใบโอน/เลขที่ PO บนหน้ารายงานสต็อก เพื่อให้พนักงานสาขาคัดลอกไปค้นหาต่อในหน้า Stock Adjustment ได้สะดวกขึ้นโดยไม่ต้องพิมพ์เอง",
+    "requested_by": "Tukta",
+    "request_date": "2026-11-18T03:30:00Z",
+    "status": "Draft",
+    "dev_assigned": null,
+    "target_version": "v1.3.0",
+    "remark": "อยู่ระหว่างสรุป UI กับทีมสาขา",
+    "created_at": "2026-11-18T03:30:00Z",
+    "updated_at": "2026-11-18T03:30:00Z",
+    "images": []
+  }
+]
