@@ -25,8 +25,8 @@ const supabaseOrigin = (() => {
 })();
 
 export const metadata: Metadata = {
-  title: "Jiffy Requirement Tracker ( New Pos Jiffy) | VTec Pos Retail • Jiffy Project",
-  description: "VTec Pos Retail • Jiffy Project - ระบบบันทึก ติดตาม และสรุป Requirement Log พร้อมรูปประกอบ",
+  title: "Jiffy Requirement Tracker (New POS Jiffy) | VTec POS Retail",
+  description: "VTec POS Retail • Jiffy Project - ระบบบันทึก ติดตาม และสรุป Requirement พร้อมรูปประกอบ",
 };
 
 export default function RootLayout({

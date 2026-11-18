@@ -17,7 +17,7 @@ import { CoreFunctionType } from '@/types';
 
 export interface RenameTarget {
   oldName: string;
-  core: CoreFunctionType | string;
+  core: CoreFunctionType;
 }
 
 export interface DeleteBlockedNotice {
@@ -27,7 +27,7 @@ export interface DeleteBlockedNotice {
 
 export interface ConfirmDeleteTarget {
   moduleName: string;
-  core: CoreFunctionType | string;
+  core: CoreFunctionType;
 }
 
 export interface SubModuleSummary {
@@ -39,7 +39,7 @@ export interface SubModuleSummary {
 }
 
 export interface ActiveCoreSummary {
-  core: CoreFunctionType | string;
+  core: CoreFunctionType;
   subModules: SubModuleSummary[];
 }
 
@@ -69,9 +69,9 @@ interface SubModuleModalsProps {
   onManageSearchChange: (val: string) => void;
   onCloseManagingModules: () => void;
   onOpenAddSubModule: () => void;
-  onOpenRename: (name: string, core?: CoreFunctionType | string | null) => void;
-  onAttemptDeleteModule: (name: string, core: CoreFunctionType | string | null | undefined, totalCount: number) => void;
-  selectedCore: CoreFunctionType | string | null;
+  onOpenRename: (name: string, core?: CoreFunctionType | null) => void;
+  onAttemptDeleteModule: (name: string, core: CoreFunctionType | null | undefined, totalCount: number) => void;
+  selectedCore: CoreFunctionType | null;
   canUpdateModule: boolean;
   canDeleteModule: boolean;
 }

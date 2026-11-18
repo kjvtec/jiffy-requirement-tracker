@@ -28,18 +28,17 @@ import {
   CORE_FUNCTION_META,
   DEFAULT_CORE_FUNCTION,
   SystemModule,
-  DEFAULT_MODULES_BY_CORE,
   REQUIREMENT_STATUSES,
 } from '@/types';
 import { getStatusBadgeClass, getStatusShortTh } from '@/lib/status';
-import { PRIORITY_GROUPS, sortIssuesClosedLast, parseIssueNumber } from '@/lib/issueSort';
+import { PRIORITY_GROUPS, sortRequirementsDoneLast, parseReqNumber } from '@/lib/requirementSort';
 
 interface PriorityListViewProps {
-  issues: Requirement[];
+  requirements: Requirement[];
   modules?: SystemModule[];
-  onSelectIssue: (issue: Requirement) => void;
-  onCreateIssue: (presetCore?: CoreFunctionType, presetModule?: string, presetPriority?: PriorityType) => void;
-  onExportExcel: (targetIssues: Requirement[], scopeTitle?: string) => void;
+  onSelectRequirement: (requirement: Requirement) => void;
+  onCreateRequirement: (presetCore?: CoreFunctionType, presetModule?: string, presetPriority?: PriorityType) => void;
+  onExportExcel: (targetRequirements: Requirement[], scopeTitle?: string) => void;
 }
 
 type PrioritySortMode = 'req_id_desc' | 'req_id_asc' | 'status';
@@ -51,10 +50,10 @@ function PriorityGroupIcon({ priority }: { priority: PriorityType }) {
 }
 
 export default function PriorityListView({
-  issues: requirements,
+  requirements,
   modules,
-  onSelectIssue,
-  onCreateIssue,
+  onSelectRequirement,
+  onCreateRequirement,
   onExportExcel,
 }: PriorityListViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,14 +76,6 @@ export default function PriorityListView({
       });
     }
 
-    if (coreFilter && DEFAULT_MODULES_BY_CORE[coreFilter as CoreFunctionType]) {
-      DEFAULT_MODULES_BY_CORE[coreFilter as CoreFunctionType].forEach((m) => set.add(m));
-    } else if (!coreFilter) {
-      Object.values(DEFAULT_MODULES_BY_CORE).forEach((list) => {
-        list.forEach((m) => set.add(m));
-      });
-    }
-
     requirements.forEach((i) => {
       if (!coreFilter || (i.core_function || DEFAULT_CORE_FUNCTION) === coreFilter) {
         if (i.module) set.add(i.module);
@@ -98,9 +89,6 @@ export default function PriorityListView({
     setCoreFilter(newCore);
     if (moduleFilter && newCore) {
       const allowedInCore = new Set<string>();
-      if (DEFAULT_MODULES_BY_CORE[newCore as CoreFunctionType]) {
-        DEFAULT_MODULES_BY_CORE[newCore as CoreFunctionType].forEach((m) => allowedInCore.add(m));
-      }
       if (modules) {
         modules.filter((m) => m.core_function === newCore).forEach((m) => allowedInCore.add(m.name));
       }
@@ -118,21 +106,21 @@ export default function PriorityListView({
   const baseFilteredRequirements = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return requirements.filter((item) => {
-      const isDone = item.status === 'Done' || (item.status as string) === 'Closed';
+      const isDone = item.status === 'Done';
       if (hideDone && isDone) return false;
       if (coreFilter && (item.core_function || DEFAULT_CORE_FUNCTION) !== coreFilter) return false;
       if (moduleFilter && item.module !== moduleFilter) return false;
       if (statusFilter && item.status !== statusFilter) return false;
       if (q) {
         const hay = [
-          item.req_id || (item as any).log_id || '',
+          item.req_id || '',
           item.title || '',
           item.details || '',
           item.module || '',
           (item.core_function || DEFAULT_CORE_FUNCTION) as string,
-          item.dev_assigned || (item as any).closed_by || '',
+          item.dev_assigned || '',
           item.remark || '',
-          item.requested_by || (item as any).raise_by || '',
+          item.requested_by || '',
           item.target_version || '',
         ]
           .join(' ')
@@ -146,20 +134,20 @@ export default function PriorityListView({
   const groupedData = useMemo(() => {
     return PRIORITY_GROUPS.map((meta) => {
       const allItems = [...baseFilteredRequirements.filter((i) => i.priority === meta.value)].sort((a, b) => {
-        const isDoneA = a.status === 'Done' || (a.status as string) === 'Closed' ? 1 : 0;
-        const isDoneB = b.status === 'Done' || (b.status as string) === 'Closed' ? 1 : 0;
+        const isDoneA = a.status === 'Done' ? 1 : 0;
+        const isDoneB = b.status === 'Done' ? 1 : 0;
         if (isDoneA !== isDoneB) return isDoneA - isDoneB;
 
         if (sortBy === 'status') {
           return a.status.localeCompare(b.status);
         }
-        const numA = parseIssueNumber(a.req_id || (a as any).log_id || '');
-        const numB = parseIssueNumber(b.req_id || (b as any).log_id || '');
+        const numA = parseReqNumber(a.req_id || '');
+        const numB = parseReqNumber(b.req_id || '');
         return sortBy === 'req_id_desc' ? numB - numA : numA - numB;
       });
 
-      const activeItems = allItems.filter((i) => i.status !== 'Done' && (i.status as string) !== 'Closed');
-      const doneItems = allItems.filter((i) => i.status === 'Done' || (i.status as string) === 'Closed');
+      const activeItems = allItems.filter((i) => i.status !== 'Done');
+      const doneItems = allItems.filter((i) => i.status === 'Done');
       return {
         meta,
         allItems,
@@ -180,8 +168,8 @@ export default function PriorityListView({
   }, [visibleGroups]);
 
   const totalStats = useMemo(() => {
-    const active = baseFilteredRequirements.filter((i) => i.status !== 'Done' && (i.status as string) !== 'Closed').length;
-    const done = baseFilteredRequirements.filter((i) => i.status === 'Done' || (i.status as string) === 'Closed').length;
+    const active = baseFilteredRequirements.filter((i) => i.status !== 'Done').length;
+    const done = baseFilteredRequirements.filter((i) => i.status === 'Done').length;
     return { total: baseFilteredRequirements.length, active, done };
   }, [baseFilteredRequirements]);
 
@@ -272,7 +260,7 @@ export default function PriorityListView({
             <button
               type="button"
               onClick={() =>
-                onCreateIssue(
+                onCreateRequirement(
                   coreFilter ? (coreFilter as CoreFunctionType) : undefined,
                   moduleFilter || undefined,
                   selectedPriority !== 'ALL' ? selectedPriority : undefined
@@ -450,12 +438,12 @@ export default function PriorityListView({
 
                     <div className={`divide-y ${meta.divideClass}`}>
                       {allItems.map((req, idx) => {
-                        const isDone = req.status === 'Done' || (req.status as string) === 'Closed';
-                        const isFirstDone = isDone && (idx === 0 || (allItems[idx - 1]?.status !== 'Done' && (allItems[idx - 1]?.status as string) !== 'Closed'));
+                        const isDone = req.status === 'Done';
+                        const isFirstDone = isDone && (idx === 0 || (allItems[idx - 1]?.status !== 'Done'));
                         const coreFn = (req.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType;
                         const coreMeta = CORE_FUNCTION_META[coreFn] || CORE_FUNCTION_META[DEFAULT_CORE_FUNCTION];
                         const statusColor = getStatusBadgeClass(req.status);
-                        const displayId = req.req_id || (req as any).log_id || 'REQ';
+                        const displayId = req.req_id || 'REQ';
 
                         return (
                           <React.Fragment key={req.id}>
@@ -467,7 +455,7 @@ export default function PriorityListView({
                             )}
 
                             <div
-                              onClick={() => onSelectIssue(req)}
+                              onClick={() => onSelectRequirement(req)}
                               className={`px-3 py-2 transition-colors cursor-pointer group grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-2 items-center text-xs ${
                                 isDone
                                   ? 'bg-slate-50/75 opacity-70 hover:opacity-100 hover:bg-slate-100/80'
@@ -481,7 +469,7 @@ export default function PriorityListView({
                                     className={`font-mono text-[11px] font-extrabold px-2 py-0.5 rounded-md border transition-colors shrink-0 ${
                                       isDone
                                         ? 'text-slate-600 bg-slate-100 border-slate-200'
-                                        : meta.logIdBadgeClass
+                                        : meta.reqIdBadgeClass
                                     }`}
                                   >
                                     {displayId}
@@ -529,9 +517,9 @@ export default function PriorityListView({
 
                               {/* Dev & Version */}
                               <div className="md:col-span-2 flex flex-col justify-center min-w-0 text-[11px]">
-                                {req.dev_assigned || (req as any).closed_by ? (
+                                {req.dev_assigned ? (
                                   <span className="font-semibold text-indigo-900 truncate">
-                                    Dev: {req.dev_assigned || (req as any).closed_by}
+                                    Dev: {req.dev_assigned}
                                   </span>
                                 ) : (
                                   <span className="text-slate-400 italic">ยังไม่มอบหมาย</span>

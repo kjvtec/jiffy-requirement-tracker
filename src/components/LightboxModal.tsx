@@ -2,12 +2,12 @@
 
 import React, { useEffect, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
-import { IssueImage } from '@/types';
+import { RequirementImage } from '@/types';
 
 interface LightboxModalProps {
   isOpen: boolean;
   onClose: () => void;
-  images: IssueImage[];
+  images: RequirementImage[];
   currentIndex: number;
   onNavigate: (newIndex: number) => void;
 }

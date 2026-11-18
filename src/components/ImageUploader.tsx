@@ -4,12 +4,12 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import imageCompression from 'browser-image-compression';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { UploadCloud, X, Loader2, Image as ImageIcon, Clipboard } from 'lucide-react';
-import { IssueImage } from '@/types';
+import { RequirementImage } from '@/types';
 
 interface ImageUploaderProps {
-  images: IssueImage[];
-  onChange: (images: IssueImage[]) => void;
-  issueLogId?: string;
+  images: RequirementImage[];
+  onChange: (images: RequirementImage[]) => void;
+  folder?: string;
   title?: string;
   bucketName?: string;
 }
@@ -17,7 +17,7 @@ interface ImageUploaderProps {
 export default function ImageUploader({
   images,
   onChange,
-  issueLogId,
+  folder,
   title = 'รูปภาพประกอบ Wireframe / Mockup',
   bucketName = 'requirement-attachments',
 }: ImageUploaderProps) {
@@ -30,7 +30,7 @@ export default function ImageUploader({
     if (files.length === 0) return;
     setIsUploading(true);
 
-    const newImages: IssueImage[] = [...images];
+    const newImages: RequirementImage[] = [...images];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -60,30 +60,20 @@ export default function ImageUploader({
 
         // 2. Upload to Supabase Storage
         setUploadProgress(`กำลังอัปโหลดรูปที่ ${i + 1}/${files.length}...`);
-        const cleanLogId = (issueLogId || 'NEW').replace(/[^a-zA-Z0-9_-]/g, '');
+        const cleanFolder = (folder || 'NEW').replace(/[^a-zA-Z0-9_-]/g, '');
         const timestamp = Date.now();
         const randomStr = Math.random().toString(36).substring(2, 7);
-        const ext = file.name.split('.').pop() || 'png';
-        const filePath = `${cleanLogId}/${timestamp}_${randomStr}.${ext}`;
+        const rawExt = (file.name.split('.').pop() || '').replace(/[^a-zA-Z0-9]/g, '');
+        const ext = rawExt && rawExt.length <= 5 ? rawExt : 'png';
+        const filePath = `${cleanFolder}/${timestamp}_${randomStr}.${ext}`;
 
-        let targetBucket = bucketName || 'requirement-attachments';
-        let { error: uploadError } = await supabase.storage
+        const targetBucket = bucketName || 'requirement-attachments';
+        const { error: uploadError } = await supabase.storage
           .from(targetBucket)
           .upload(filePath, compressedFile, {
             contentType: compressedFile.type,
             upsert: false,
           });
-
-        if (uploadError && uploadError.message?.includes('Bucket not found')) {
-          targetBucket = 'issue-attachments';
-          const retry = await supabase.storage
-            .from(targetBucket)
-            .upload(filePath, compressedFile, {
-              contentType: compressedFile.type,
-              upsert: false,
-            });
-          uploadError = retry.error;
-        }
 
         if (uploadError) {
           console.error('Storage upload error:', uploadError);
@@ -109,7 +99,7 @@ export default function ImageUploader({
     onChange(newImages);
     setIsUploading(false);
     setUploadProgress('');
-  }, [images, onChange, issueLogId]);
+  }, [images, onChange, folder]);
 
   // Handle Paste from Clipboard (Ctrl + V)
   useEffect(() => {

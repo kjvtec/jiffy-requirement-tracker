@@ -36,20 +36,19 @@ import {
   CoreFunctionType,
   CORE_FUNCTION_META,
   DEFAULT_CORE_FUNCTION,
-  DEFAULT_MODULES_BY_CORE,
   REQUIREMENT_STATUSES,
   RequirementStatusType,
 } from '@/types';
 import { getStatusBadgeClass, getStatusShortTh } from '@/lib/status';
-import { parseIssueNumber } from '@/lib/issueSort';
+import { parseReqNumber } from '@/lib/requirementSort';
 import SubModuleModals, {
   RenameTarget,
   DeleteBlockedNotice,
   ConfirmDeleteTarget,
 } from './SubModuleModals';
 
-interface IssueExplorerViewProps {
-  issues: Requirement[];
+interface RequirementExplorerViewProps {
+  requirements: Requirement[];
   modules: SystemModule[];
   teamMembers: TeamMember[];
   filter: RequirementFilter;
@@ -58,14 +57,14 @@ interface IssueExplorerViewProps {
   selectedModule: string | null;
   onSelectCore: (core: CoreFunctionType | null) => void;
   onSelectModule: (mod: string | null) => void;
-  onSelectIssue: (issue: Requirement) => void;
-  onEditIssue: (issue: Requirement) => void;
-  onDeleteIssue: (issueId: string) => Promise<void>;
-  onCreateIssue: (presetCore?: CoreFunctionType, presetModule?: string) => void;
-  onExportExcel: (targetIssues: Requirement[], scopeTitle?: string) => void;
-  onAddModule?: (name: string, coreFunction: CoreFunctionType | string) => Promise<void>;
-  onUpdateModule?: (oldName: string, newName: string, coreFunction: CoreFunctionType | string) => Promise<void>;
-  onDeleteModule?: (name: string, coreFunction: CoreFunctionType | string) => Promise<{ success: boolean; message?: string }>;
+  onSelectRequirement: (requirement: Requirement) => void;
+  onEditRequirement: (requirement: Requirement) => void;
+  onDeleteRequirement: (requirementId: string) => void;
+  onCreateRequirement: (presetCore?: CoreFunctionType, presetModule?: string) => void;
+  onExportExcel: (targetRequirements: Requirement[], scopeTitle?: string) => void;
+  onAddModule?: (name: string, coreFunction: CoreFunctionType) => Promise<void>;
+  onUpdateModule?: (oldName: string, newName: string, coreFunction: CoreFunctionType) => Promise<void>;
+  onDeleteModule?: (name: string, coreFunction: CoreFunctionType) => Promise<{ success: boolean; message?: string }>;
 }
 
 const getPriorityStyle = (priority: string) => {
@@ -79,9 +78,9 @@ interface RequirementTableProps {
   sortField: keyof Requirement;
   sortAsc: boolean;
   onSort: (field: keyof Requirement) => void;
-  onSelectIssue: (issue: Requirement) => void;
-  onEditIssue: (issue: Requirement) => void;
-  onDeleteIssue: (issueId: string) => Promise<void>;
+  onSelectRequirement: (requirement: Requirement) => void;
+  onEditRequirement: (requirement: Requirement) => void;
+  onDeleteRequirement: (requirementId: string) => void;
   showCoreColumn?: boolean;
 }
 
@@ -90,9 +89,9 @@ const RequirementTable = React.memo(function RequirementTable({
   sortField,
   sortAsc,
   onSort,
-  onSelectIssue,
-  onEditIssue,
-  onDeleteIssue,
+  onSelectRequirement,
+  onEditRequirement,
+  onDeleteRequirement,
   showCoreColumn = false,
 }: RequirementTableProps) {
   return (
@@ -152,13 +151,13 @@ const RequirementTable = React.memo(function RequirementTable({
           {items.map((req) => {
             const coreFn = (req.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType;
             const meta = CORE_FUNCTION_META[coreFn] || CORE_FUNCTION_META[DEFAULT_CORE_FUNCTION];
-            const isDone = req.status === 'Done' || (req.status as string) === 'Closed';
-            const displayId = req.req_id || (req as any).log_id || 'REQ';
+            const isDone = req.status === 'Done';
+            const displayId = req.req_id || 'REQ';
 
             return (
               <tr
                 key={req.id}
-                onClick={() => onSelectIssue(req)}
+                onClick={() => onSelectRequirement(req)}
                 className={`transition-colors cursor-pointer group ${
                   isDone
                     ? 'bg-slate-50/80 opacity-80 hover:opacity-100 hover:bg-slate-100/70'
@@ -239,11 +238,11 @@ const RequirementTable = React.memo(function RequirementTable({
 
                 {/* 6. Dev Assigned & Target Version */}
                 <td className="py-3.5 px-4 align-top">
-                  {req.dev_assigned || (req as any).closed_by ? (
+                  {req.dev_assigned ? (
                     <div className="flex flex-col gap-0.5">
                       <span className="inline-flex items-center gap-1 text-xs font-bold text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200/80 w-fit">
                         <Code2 className="w-3 h-3 text-indigo-600" />
-                        {req.dev_assigned || (req as any).closed_by}
+                        {req.dev_assigned}
                       </span>
                       {req.target_version && (
                         <span className="text-[10px] font-mono font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-1">
@@ -259,11 +258,11 @@ const RequirementTable = React.memo(function RequirementTable({
                 {/* 7. Requested By & Date */}
                 <td className="py-3.5 px-4 align-top">
                   <p className="text-xs font-bold text-slate-800">
-                    {req.requested_by || (req as any).raise_by || 'Unknown'}
+                    {req.requested_by || 'Unknown'}
                   </p>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    {req.request_date || (req as any).raise_date
-                      ? new Date(req.request_date || (req as any).raise_date).toLocaleDateString('th-TH')
+                    {req.request_date
+                      ? new Date(req.request_date).toLocaleDateString('th-TH')
                       : '-'}
                   </p>
                 </td>
@@ -273,7 +272,7 @@ const RequirementTable = React.memo(function RequirementTable({
                   <div className="flex items-center justify-end gap-1">
                     <button
                       type="button"
-                      onClick={() => onSelectIssue(req)}
+                      onClick={() => onSelectRequirement(req)}
                       className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                       title="ดูรายละเอียด Requirement"
                     >
@@ -281,7 +280,7 @@ const RequirementTable = React.memo(function RequirementTable({
                     </button>
                     <button
                       type="button"
-                      onClick={() => onEditIssue(req)}
+                      onClick={() => onEditRequirement(req)}
                       className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                       title="แก้ไข Requirement"
                     >
@@ -289,7 +288,7 @@ const RequirementTable = React.memo(function RequirementTable({
                     </button>
                     <button
                       type="button"
-                      onClick={() => onDeleteIssue(req.id)}
+                      onClick={() => onDeleteRequirement(req.id)}
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="ลบ Requirement"
                     >
@@ -306,8 +305,8 @@ const RequirementTable = React.memo(function RequirementTable({
   );
 });
 
-export default function IssueExplorerView({
-  issues: requirements,
+export default function RequirementExplorerView({
+  requirements,
   modules,
   teamMembers,
   filter,
@@ -316,15 +315,15 @@ export default function IssueExplorerView({
   selectedModule,
   onSelectCore,
   onSelectModule,
-  onSelectIssue,
-  onEditIssue,
-  onDeleteIssue,
-  onCreateIssue,
+  onSelectRequirement,
+  onEditRequirement,
+  onDeleteRequirement,
+  onCreateRequirement,
   onExportExcel,
   onAddModule,
   onUpdateModule,
   onDeleteModule,
-}: IssueExplorerViewProps) {
+}: RequirementExplorerViewProps) {
   const [sortField, setSortField] = useState<keyof Requirement>('req_id');
   const [sortAsc, setSortAsc] = useState(false);
   const [collapsedSubModules, setCollapsedSubModules] = useState<Record<string, boolean>>({});
@@ -335,14 +334,14 @@ export default function IssueExplorerView({
   // Sub-module management modal states
   const [managingModules, setManagingModules] = useState(false);
   const [manageSearch, setManageSearch] = useState('');
-  const [renameTarget, setRenameTarget] = useState<{ oldName: string; core: CoreFunctionType | string } | null>(null);
+  const [renameTarget, setRenameTarget] = useState<{ oldName: string; core: CoreFunctionType } | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [savingRename, setSavingRename] = useState(false);
   const [deleteBlockedNotice, setDeleteBlockedNotice] = useState<{ moduleName: string; count: number } | null>(null);
-  const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<{ moduleName: string; core: CoreFunctionType | string } | null>(null);
+  const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<{ moduleName: string; core: CoreFunctionType } | null>(null);
   const [deletingModule, setDeletingModule] = useState(false);
 
-  const handleOpenRename = (modName: string, core?: CoreFunctionType | string | null) => {
+  const handleOpenRename = (modName: string, core?: CoreFunctionType | null) => {
     const validCore = (core || selectedCore || DEFAULT_CORE_FUNCTION) as CoreFunctionType;
     setRenameTarget({ oldName: modName, core: validCore });
     setRenameValue(modName);
@@ -364,7 +363,7 @@ export default function IssueExplorerView({
 
   const handleAttemptDeleteModule = (
     modName: string,
-    core: CoreFunctionType | string | null | undefined,
+    core: CoreFunctionType | null | undefined,
     count: number
   ) => {
     if (count > 0) {
@@ -404,13 +403,13 @@ export default function IssueExplorerView({
   const sortRequirements = useMemo(() => {
     return (list: Requirement[]) =>
       [...list].sort((a, b) => {
-        const isDoneA = a.status === 'Done' || (a.status as string) === 'Closed' ? 1 : 0;
-        const isDoneB = b.status === 'Done' || (b.status as string) === 'Closed' ? 1 : 0;
+        const isDoneA = a.status === 'Done' ? 1 : 0;
+        const isDoneB = b.status === 'Done' ? 1 : 0;
         if (isDoneA !== isDoneB) return isDoneA - isDoneB;
 
         if (sortField === 'req_id') {
-          const numA = parseIssueNumber(a.req_id || (a as any).log_id || '');
-          const numB = parseIssueNumber(b.req_id || (b as any).log_id || '');
+          const numA = parseReqNumber(a.req_id || '');
+          const numB = parseReqNumber(b.req_id || '');
           return sortAsc ? numA - numB : numB - numA;
         }
         const valA = String(a[sortField] ?? '').toLowerCase();
@@ -426,14 +425,14 @@ export default function IssueExplorerView({
     const filtered = requirements.filter((item) => {
       if (filter.search) {
         const q = filter.search.toLowerCase();
-        const matchId = (item.req_id || (item as any).log_id || '').toLowerCase().includes(q);
+        const matchId = (item.req_id || '').toLowerCase().includes(q);
         const matchTitle = (item.title || '').toLowerCase().includes(q);
         const matchDetails = (item.details || '').toLowerCase().includes(q);
         const matchRemark = (item.remark || '').toLowerCase().includes(q);
         const matchModule = (item.module || '').toLowerCase().includes(q);
         const matchCore = ((item.core_function || DEFAULT_CORE_FUNCTION) as string).toLowerCase().includes(q);
         const matchDev = (item.dev_assigned || '').toLowerCase().includes(q);
-        const matchReqBy = (item.requested_by || (item as any).raise_by || '').toLowerCase().includes(q);
+        const matchReqBy = (item.requested_by || '').toLowerCase().includes(q);
 
         if (!matchId && !matchTitle && !matchDetails && !matchRemark && !matchModule && !matchCore && !matchDev && !matchReqBy) {
           return false;
@@ -442,7 +441,7 @@ export default function IssueExplorerView({
       if (filter.status && item.status !== filter.status) return false;
       if (filter.priority && item.priority !== filter.priority) return false;
       if (filter.dev_assigned && item.dev_assigned !== filter.dev_assigned) return false;
-      if (filter.requested_by && (item.requested_by || (item as any).raise_by) !== filter.requested_by) return false;
+      if (filter.requested_by && (item.requested_by) !== filter.requested_by) return false;
       return true;
     });
     return sortRequirements(filtered);
@@ -474,7 +473,7 @@ export default function IssueExplorerView({
         (r) => (r.core_function || DEFAULT_CORE_FUNCTION) === core
       );
 
-      const modSet = new Set<string>(DEFAULT_MODULES_BY_CORE[core] || []);
+      const modSet = new Set<string>();
       modules
         .filter((m) => (m.core_function || DEFAULT_CORE_FUNCTION) === core)
         .forEach((m) => {
@@ -489,7 +488,7 @@ export default function IssueExplorerView({
           const modAll = coreAll.filter((r) => (r.module || 'General') === modName);
           const modFiltered = coreFiltered.filter((r) => (r.module || 'General') === modName);
           const total = modAll.length;
-          const done = modAll.filter((r) => r.status === 'Done' || (r.status as string) === 'Closed').length;
+          const done = modAll.filter((r) => r.status === 'Done').length;
           const pending = total - done;
           return {
             name: modName,
@@ -506,7 +505,7 @@ export default function IssueExplorerView({
         });
 
       const total = coreAll.length;
-      const done = coreAll.filter((r) => r.status === 'Done' || (r.status as string) === 'Closed').length;
+      const done = coreAll.filter((r) => r.status === 'Done').length;
       const pending = total - done;
 
       return {
@@ -728,7 +727,7 @@ export default function IssueExplorerView({
 
             <button
               type="button"
-              onClick={() => onCreateIssue(selectedCore || DEFAULT_CORE_FUNCTION, selectedModule || undefined)}
+              onClick={() => onCreateRequirement(selectedCore || DEFAULT_CORE_FUNCTION, selectedModule || undefined)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFCB06] hover:bg-[#E5B600] text-slate-950 text-xs font-black transition-all shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -750,9 +749,9 @@ export default function IssueExplorerView({
             sortField={sortField}
             sortAsc={sortAsc}
             onSort={handleSort}
-            onSelectIssue={onSelectIssue}
-            onEditIssue={onEditIssue}
-            onDeleteIssue={onDeleteIssue}
+            onSelectRequirement={onSelectRequirement}
+            onEditRequirement={onEditRequirement}
+            onDeleteRequirement={onDeleteRequirement}
             showCoreColumn={!selectedCore}
           />
         ) : (

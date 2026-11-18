@@ -14,12 +14,12 @@ import {
 } from 'lucide-react';
 
 interface SitCountdownBannerProps {
-  issues?: Requirement[];
-  requirements?: Requirement[];
+  requirements: Requirement[];
 }
 
-const START_DATE_STR = '2026-10-19'; // 19 ต.ค. 2569
-const SIT_DATE_STR = '2027-01-04'; // 4 ม.ค. 2570
+// Project window. Override per deployment with NEXT_PUBLIC_PROJECT_START / NEXT_PUBLIC_SIT_DATE (YYYY-MM-DD).
+const START_DATE_STR = process.env.NEXT_PUBLIC_PROJECT_START || '2026-10-19';
+const SIT_DATE_STR = process.env.NEXT_PUBLIC_SIT_DATE || '2027-01-04';
 
 function parseUtcDayMs(ymd: string): number {
   const [y, m, d] = ymd.split('-').map(Number);
@@ -45,8 +45,8 @@ function getBangkokTodayYmd(): string {
 
 type RiskLevel = 'green' | 'yellow' | 'red';
 
-export default function SitCountdownBanner({ issues, requirements }: SitCountdownBannerProps) {
-  const dataList = requirements || issues || [];
+export default function SitCountdownBanner({ requirements }: SitCountdownBannerProps) {
+  const dataList = requirements;
 
   const timeline = useMemo(() => {
     const totalDays = Math.max(1, diffDays(START_DATE_STR, SIT_DATE_STR)); // 77 days
@@ -57,10 +57,10 @@ export default function SitCountdownBanner({ issues, requirements }: SitCountdow
     const timePct = Math.round((elapsedDays / totalDays) * 100);
 
     const totalReqs = dataList.length;
-    const doneReqs = dataList.filter((i) => i.status === 'Done' || (i.status as string) === 'Closed').length;
+    const doneReqs = dataList.filter((i) => i.status === 'Done').length;
     const pendingReqs = totalReqs - doneReqs;
     const highPending = dataList.filter(
-      (i) => i.priority === '1.High' && i.status !== 'Done' && (i.status as string) !== 'Closed'
+      (i) => i.priority === '1.High' && i.status !== 'Done'
     ).length;
     const completionPct =
       totalReqs > 0 ? Math.round((doneReqs / totalReqs) * 100) : 0;

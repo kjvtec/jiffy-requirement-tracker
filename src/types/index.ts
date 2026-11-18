@@ -152,7 +152,6 @@ export const DEFAULT_CORE_FUNCTION: CoreFunctionType = 'VTec POS';
 export interface RequirementImage {
   id?: string;
   requirement_id?: string;
-  issue_id?: string;
   file_url: string;
   file_name: string;
   file_size?: number;
@@ -161,43 +160,40 @@ export interface RequirementImage {
 
 export interface Requirement {
   id: string;
-  req_id: string; // e.g. JFY-REQ-01
+  req_id: string; // e.g. JFY-REQ-01 (assigned by the database sequence)
   title: string;
-  priority: PriorityType | string;
-  type: RequirementType | string;
-  core_function?: CoreFunctionType | string;
+  priority: PriorityType;
+  type: RequirementType;
+  core_function: CoreFunctionType;
   module: string;
   details: string;
   requested_by: string;
   request_date: string;
-  status: RequirementStatusType | string;
-  dev_assigned?: string | null;
-  target_version?: string | null;
-  remark?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  images?: RequirementImage[];
-
-  // Compatibility helpers
-  log_id?: string;
-  raise_by?: string;
-  raise_date?: string;
-  resolution?: string;
-  closed_by?: string | null;
-  closed_version?: string | null;
-  updated_by?: string | null;
+  status: RequirementStatusType;
+  dev_assigned: string | null;
+  target_version: string | null;
+  remark: string | null;
+  created_at: string;
+  updated_at: string;
+  images: RequirementImage[];
 }
+
+/** Fields the user edits when creating / updating a requirement. */
+export type RequirementInput = Omit<
+  Requirement,
+  'id' | 'req_id' | 'created_at' | 'updated_at' | 'images'
+>;
 
 export interface TeamMember {
   id: number;
   name: string;
-  role?: string;
+  role?: string | null;
 }
 
 export interface SystemModule {
   id: number;
   name: string;
-  core_function?: string;
+  core_function: CoreFunctionType;
 }
 
 export interface RequirementFilter {
@@ -208,19 +204,35 @@ export interface RequirementFilter {
   module: string;
   requested_by: string;
   dev_assigned: string;
-  raise_by?: string;
 }
 
-export interface TimelineEntry {
-  timestamp?: string;
-  author?: string;
-  statusLabel?: string;
-  message: string;
-  isLegacy?: boolean;
+export const EMPTY_FILTER: RequirementFilter = {
+  search: '',
+  status: '',
+  priority: '',
+  core_function: '',
+  module: '',
+  requested_by: '',
+  dev_assigned: '',
+};
+
+export type ActivityAction = 'created' | 'status_change' | 'comment' | 'update';
+
+export interface ActivityEntry {
+  id: string;
+  requirement_id: string;
+  actor: string;
+  action: ActivityAction;
+  from_status?: string | null;
+  to_status?: string | null;
+  message?: string | null;
+  created_at: string;
 }
 
-// Aliases for compatibility
-export type Issue = Requirement;
-export type IssueImage = RequirementImage;
-export type StatusType = RequirementStatusType;
-export type IssueFilter = RequirementFilter;
+export const DEFAULT_TEAM: Array<{ name: string; role: string }> = [
+  { name: 'Aoy', role: 'Project Lead' },
+  { name: 'Kampon', role: 'Dev / Lead' },
+  { name: 'Kraijate', role: 'QA / Tester' },
+  { name: 'Tukta', role: 'Dev / Member' },
+  { name: 'Nat', role: 'Dev / Member' },
+];

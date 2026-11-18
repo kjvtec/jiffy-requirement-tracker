@@ -247,21 +247,21 @@ export async function exportRequirementsToExcel(
   workbook.modified = new Date();
 
   const sortedReqs = [...requirements].sort((a, b) => {
-    const isDoneA = a.status === 'Done' || (a.status as string) === 'Closed' ? 1 : 0;
-    const isDoneB = b.status === 'Done' || (b.status as string) === 'Closed' ? 1 : 0;
+    const isDoneA = a.status === 'Done' ? 1 : 0;
+    const isDoneB = b.status === 'Done' ? 1 : 0;
     if (isDoneA !== isDoneB) return isDoneA - isDoneB;
 
     const coreDiff = getCoreOrder(a.core_function as string) - getCoreOrder(b.core_function as string);
     if (coreDiff !== 0) return coreDiff;
 
-    return parseReqNumber(a.req_id || (a as any).log_id || '') - parseReqNumber(b.req_id || (b as any).log_id || '');
+    return parseReqNumber(a.req_id || '') - parseReqNumber(b.req_id || '');
   });
 
   // Assign clean unique sheet names
   const usedSheetNames = new Set<string>();
   const reqSheetNames = new Map<string, string>();
   sortedReqs.forEach((r, idx) => {
-    const rawId = r.req_id || (r as any).log_id || `REQ_${idx + 1}`;
+    const rawId = r.req_id || `REQ_${idx + 1}`;
     const name = sanitizeSheetName(rawId, usedSheetNames);
     reqSheetNames.set(r.id || `${rawId}_${idx}`, name);
   });
@@ -272,7 +272,7 @@ export async function exportRequirementsToExcel(
     const imgs = r.images || [];
     imgs.forEach((img, imgIdx) => {
       allImageTasks.push({
-        cacheKey: `${r.id || r.req_id || (r as any).log_id}__${imgIdx}`,
+        cacheKey: `${r.id || r.req_id}__${imgIdx}`,
         url: img.file_url,
         fileName: img.file_name,
       });
@@ -371,7 +371,7 @@ export async function exportRequirementsToExcel(
     const inReview = cReqs.filter((r) => r.status === 'In Review').length;
     const inDev = cReqs.filter((r) => r.status === 'In Development').length;
     const testing = cReqs.filter((r) => r.status === 'Testing').length;
-    const done = cReqs.filter((r) => r.status === 'Done' || (r.status as string) === 'Closed').length;
+    const done = cReqs.filter((r) => r.status === 'Done').length;
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
     indexSheet.mergeCells(`A${rowIdx}:C${rowIdx}`);
@@ -399,7 +399,7 @@ export async function exportRequirementsToExcel(
   const totInReview = sortedReqs.filter((r) => r.status === 'In Review').length;
   const totInDev = sortedReqs.filter((r) => r.status === 'In Development').length;
   const totTesting = sortedReqs.filter((r) => r.status === 'Testing').length;
-  const totDone = sortedReqs.filter((r) => r.status === 'Done' || (r.status as string) === 'Closed').length;
+  const totDone = sortedReqs.filter((r) => r.status === 'Done').length;
   const totPct = totTotal > 0 ? Math.round((totDone / totTotal) * 100) : 0;
 
   indexSheet.mergeCells(`A${totalRowIdx}:C${totalRowIdx}`);
@@ -455,7 +455,7 @@ export async function exportRequirementsToExcel(
   // Populate Index Rows
   sortedReqs.forEach((r, idx) => {
     const rowIdx = 12 + idx;
-    const displayId = r.req_id || (r as any).log_id || `REQ-${idx + 1}`;
+    const displayId = r.req_id || `REQ-${idx + 1}`;
     const sheetName = reqSheetNames.get(r.id || `${displayId}_${idx}`)!;
     const row = indexSheet.getRow(rowIdx);
     const pStyle = getPriorityColors(r.priority);
@@ -472,12 +472,12 @@ export async function exportRequirementsToExcel(
     row.getCell(6).value = r.priority;
     row.getCell(7).value = r.type || 'New Feature';
     row.getCell(8).value = r.status;
-    row.getCell(9).value = r.dev_assigned || (r as any).closed_by || '-';
-    row.getCell(10).value = r.target_version || (r as any).closed_version || '-';
-    row.getCell(11).value = r.requested_by || (r as any).raise_by || '-';
-    row.getCell(12).value = formatDateTh(r.request_date || (r as any).raise_date);
+    row.getCell(9).value = r.dev_assigned || '-';
+    row.getCell(10).value = r.target_version || '-';
+    row.getCell(11).value = r.requested_by || '-';
+    row.getCell(12).value = formatDateTh(r.request_date);
     row.getCell(13).value = r.details;
-    row.getCell(14).value = r.remark || (r as any).resolution || '-';
+    row.getCell(14).value = r.remark || '-';
     row.getCell(15).value = r.images?.length || 0;
     row.getCell(16).value = {
       formula: `HYPERLINK("#'${sheetName}'!A1","เปิดชีท →")`,
@@ -500,7 +500,7 @@ export async function exportRequirementsToExcel(
   // =========================================================================
   for (let i = 0; i < sortedReqs.length; i++) {
     const r = sortedReqs[i];
-    const displayId = r.req_id || (r as any).log_id || `REQ-${i + 1}`;
+    const displayId = r.req_id || `REQ-${i + 1}`;
     const sheetName = reqSheetNames.get(r.id || `${displayId}_${i}`)!;
     const coreFn = r.core_function || DEFAULT_CORE_FUNCTION;
     const statusStyle = getStatusColors(r.status);
@@ -553,11 +553,11 @@ export async function exportRequirementsToExcel(
       { label: 'Priority (ความเร่งด่วน)', value: r.priority, highlight: priorityStyle },
       { label: 'ประเภท (Type)', value: r.type || 'New Feature' },
       { label: 'สถานะงาน (Status)', value: r.status, highlight: statusStyle },
-      { label: 'Dev ผู้รับผิดชอบ (Dev Assigned)', value: r.dev_assigned || (r as any).closed_by || '-' },
-      { label: 'Target Version / Sprint', value: r.target_version || (r as any).closed_version || '-' },
-      { label: 'ผู้ขอ (Requested By)', value: `${r.requested_by || (r as any).raise_by || '-'} (${formatDateTh(r.request_date || (r as any).raise_date)})` },
+      { label: 'Dev ผู้รับผิดชอบ (Dev Assigned)', value: r.dev_assigned || '-' },
+      { label: 'Target Version / Sprint', value: r.target_version || '-' },
+      { label: 'ผู้ขอ (Requested By)', value: `${r.requested_by || '-'} (${formatDateTh(r.request_date)})` },
       { label: 'รายละเอียดความต้องการ / Acceptance Criteria', value: r.details || '-', multiline: true },
-      { label: 'หมายเหตุเพิ่มเติม / Dev Notes', value: r.remark || (r as any).resolution || '-', multiline: true },
+      { label: 'หมายเหตุเพิ่มเติม / Dev Notes', value: r.remark || '-', multiline: true },
     ];
 
     let currentRow = 4;

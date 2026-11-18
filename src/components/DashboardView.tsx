@@ -32,17 +32,16 @@ import {
   CoreFunctionType,
   CORE_FUNCTION_META,
   DEFAULT_CORE_FUNCTION,
-  DEFAULT_MODULES_BY_CORE,
   REQUIREMENT_TYPES,
   RequirementType,
 } from '@/types';
 import { getStatusBadgeClass, getStatusShortTh } from '@/lib/status';
 
 interface DashboardViewProps {
-  issues: Requirement[];
+  requirements: Requirement[];
   teamMembers: TeamMember[];
   modules: SystemModule[];
-  onSelectIssue: (req: Requirement) => void;
+  onSelectRequirement: (req: Requirement) => void;
   onFilterByModule: (moduleName: string, coreFunction?: string) => void;
   onSelectCoreFunction?: (coreFunction: CoreFunctionType) => void;
   onFilterByStatus: (statusName: string) => void;
@@ -89,10 +88,10 @@ function useAnimatedNumber(target: number, duration = 260): number {
 }
 
 export default function DashboardView({
-  issues: requirements,
+  requirements,
   teamMembers,
   modules,
-  onSelectIssue,
+  onSelectRequirement,
   onFilterByModule,
   onSelectCoreFunction,
   onFilterByStatus,
@@ -112,7 +111,7 @@ export default function DashboardView({
     const inReview = requirements.filter((r) => r.status === 'In Review').length;
     const inDev = requirements.filter((r) => r.status === 'In Development').length;
     const testing = requirements.filter((r) => r.status === 'Testing').length;
-    const done = requirements.filter((r) => r.status === 'Done' || (r.status as string) === 'Closed').length;
+    const done = requirements.filter((r) => r.status === 'Done').length;
 
     const high = requirements.filter((r) => r.priority === '1.High').length;
     const medium = requirements.filter((r) => r.priority === '2.Medium').length;
@@ -151,16 +150,16 @@ export default function DashboardView({
         (r) => (r.core_function || DEFAULT_CORE_FUNCTION) === core
       );
       const total = coreReqs.length;
-      const done = coreReqs.filter((r) => r.status === 'Done' || (r.status as string) === 'Closed').length;
+      const done = coreReqs.filter((r) => r.status === 'Done').length;
       const pending = total - done;
       const inDev = coreReqs.filter((r) => r.status === 'In Development').length;
       const highPending = coreReqs.filter(
-        (r) => r.priority === '1.High' && r.status !== 'Done' && (r.status as string) !== 'Closed'
+        (r) => r.priority === '1.High' && r.status !== 'Done'
       ).length;
       const percentDone = total > 0 ? Math.round((done / total) * 100) : 0;
 
       // Collect sub-modules
-      const subNameSet = new Set<string>(DEFAULT_MODULES_BY_CORE[core] || []);
+      const subNameSet = new Set<string>();
       modules
         .filter((m) => (m.core_function || DEFAULT_CORE_FUNCTION) === core)
         .forEach((m) => {
@@ -174,7 +173,7 @@ export default function DashboardView({
         .map((modName) => {
           const modReqs = coreReqs.filter((r) => (r.module || 'General') === modName);
           const mTotal = modReqs.length;
-          const mDone = modReqs.filter((r) => r.status === 'Done' || (r.status as string) === 'Closed').length;
+          const mDone = modReqs.filter((r) => r.status === 'Done').length;
           const mPending = mTotal - mDone;
           const mInDev = modReqs.filter((r) => r.status === 'In Development').length;
           return {
@@ -224,7 +223,7 @@ export default function DashboardView({
     });
 
     requirements.forEach((r) => {
-      const devName = r.dev_assigned || (r as any).closed_by;
+      const devName = r.dev_assigned;
       if (devName) {
         if (!map[devName]) {
           map[devName] = { total: 0, draft: 0, inReview: 0, inDev: 0, testing: 0, done: 0 };
@@ -234,7 +233,7 @@ export default function DashboardView({
         else if (r.status === 'In Review') map[devName].inReview++;
         else if (r.status === 'In Development') map[devName].inDev++;
         else if (r.status === 'Testing') map[devName].testing++;
-        else if (r.status === 'Done' || (r.status as string) === 'Closed') map[devName].done++;
+        else if (r.status === 'Done') map[devName].done++;
       }
     });
 
@@ -273,7 +272,7 @@ export default function DashboardView({
   // High Priority pending requirements
   const highPriorityPending = useMemo(() => {
     return requirements
-      .filter((r) => r.priority === '1.High' && r.status !== 'Done' && (r.status as string) !== 'Closed')
+      .filter((r) => r.priority === '1.High' && r.status !== 'Done')
       .slice(0, 8);
   }, [requirements]);
 
@@ -281,7 +280,7 @@ export default function DashboardView({
   const requestersSummary = useMemo(() => {
     const map: Record<string, number> = {};
     requirements.forEach((r) => {
-      const reqBy = r.requested_by || (r as any).raise_by || 'Unknown';
+      const reqBy = r.requested_by || 'Unknown';
       map[reqBy] = (map[reqBy] || 0) + 1;
     });
     return Object.entries(map)
@@ -737,12 +736,12 @@ export default function DashboardView({
             {highPriorityPending.map((req) => (
               <div
                 key={req.id}
-                onClick={() => onSelectIssue(req)}
+                onClick={() => onSelectRequirement(req)}
                 className="p-3.5 hover:bg-red-50/40 cursor-pointer transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5"
               >
                 <div className="flex items-start gap-3 min-w-0">
                   <span className="shrink-0 text-xs font-bold text-red-700 bg-red-100 px-2.5 py-1 rounded-md border border-red-200">
-                    {req.req_id || req.log_id}
+                    {req.req_id}
                   </span>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-slate-900 hover:text-[#0086FF] truncate">

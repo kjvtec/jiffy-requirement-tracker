@@ -1,93 +1,110 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   X,
   Edit,
   Trash2,
-  Calendar,
-  User,
-  CheckCircle2,
   Layers,
   Code2,
-  Tag,
   Save,
   ZoomIn,
-  Flame,
-  Clock,
-  Compass,
-  TestTube2,
   FileText,
-  AlertTriangle,
+  MessageSquare,
+  History,
+  Send,
 } from 'lucide-react';
 import {
-  Requirement,
-  RequirementImage,
-  RequirementStatusType,
-  TeamMember,
   CORE_FUNCTION_META,
-  CoreFunctionType,
-  DEFAULT_CORE_FUNCTION,
   REQUIREMENT_STATUSES,
+  type ActivityEntry,
+  type Requirement,
+  type RequirementStatusType,
+  type TeamMember,
 } from '@/types';
 import { getStatusBadgeClass, getStatusShortTh } from '@/lib/status';
 import LightboxModal from './LightboxModal';
 
-interface IssueDetailModalProps {
+interface RequirementDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  issue: Requirement | null;
-  onEdit: (issue: Requirement) => void;
-  onDelete: (issueId: string) => Promise<void>;
-  onStatusChange: (issueId: string, newStatus: RequirementStatusType) => Promise<void>;
-  onUpdateIssue: (issueId: string, updates: Partial<Requirement>, images: RequirementImage[]) => Promise<void>;
-  teamMembers: TeamMember[];
-  suggestedUpdaters?: string[];
+  requirement: Requirement | null;
+  team: TeamMember[];
+  onEdit: (requirement: Requirement) => void;
+  onDelete: (id: string) => void;
+  onStatusChange: (id: string, status: RequirementStatusType) => Promise<void>;
+  onQuickUpdate: (
+    id: string,
+    patch: Pick<Requirement, 'dev_assigned' | 'target_version' | 'remark'>
+  ) => Promise<void>;
+  loadActivity: (id: string) => Promise<ActivityEntry[]>;
+  onAddComment: (id: string, message: string) => Promise<void>;
 }
 
-export default function IssueDetailModal({
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+export default function RequirementDetailModal({
   isOpen,
   onClose,
-  issue,
+  requirement,
+  team,
   onEdit,
   onDelete,
   onStatusChange,
-  onUpdateIssue,
-  teamMembers,
-}: IssueDetailModalProps) {
+  onQuickUpdate,
+  loadActivity,
+  onAddComment,
+}: RequirementDetailModalProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | false>(false);
 
-  // Quick edit fields
   const [devAssigned, setDevAssigned] = useState('');
   const [targetVersion, setTargetVersion] = useState('');
   const [remark, setRemark] = useState('');
 
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const [comment, setComment] = useState('');
+  const [isCommenting, setIsCommenting] = useState(false);
+
+  const reqId = requirement?.id;
+  const reqStatus = requirement?.status;
+
+  // Re-sync the quick-edit fields whenever a different requirement is shown
+  // or the saved values change underneath us.
   useEffect(() => {
-    if (issue) {
-      setDevAssigned(issue.dev_assigned || (issue as any).closed_by || '');
-      setTargetVersion(issue.target_version || (issue as any).closed_version || '');
-      setRemark(issue.remark || (issue as any).resolution || '');
-    }
-  }, [issue]);
+    if (!requirement) return;
+    setDevAssigned(requirement.dev_assigned || '');
+    setTargetVersion(requirement.target_version || '');
+    setRemark(requirement.remark || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requirement?.id, requirement?.dev_assigned, requirement?.target_version, requirement?.remark]);
 
-  if (!isOpen || !issue) return null;
+  const refreshActivity = useCallback(async () => {
+    if (!reqId) return;
+    setActivity(await loadActivity(reqId));
+  }, [reqId, loadActivity]);
 
-  const coreFn = (issue.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType;
-  const coreMeta = CORE_FUNCTION_META[coreFn] || CORE_FUNCTION_META[DEFAULT_CORE_FUNCTION];
-  const displayId = issue.req_id || (issue as any).log_id || 'REQ';
-  const images = issue.images || [];
+  // Reload the history when opening and after every status change.
+  useEffect(() => {
+    if (isOpen && reqId) void refreshActivity();
+    if (!isOpen) setActivity([]);
+  }, [isOpen, reqId, reqStatus, refreshActivity]);
+
+  if (!isOpen || !requirement) return null;
+
+  const coreMeta = CORE_FUNCTION_META[requirement.core_function];
+  const images = requirement.images;
 
   const handleStatusClick = async (newStatus: RequirementStatusType) => {
-    if (newStatus === issue.status) return;
+    if (newStatus === requirement.status) return;
     try {
       setIsUpdatingStatus(true);
-      await onStatusChange(issue.id, newStatus);
-    } catch (e: any) {
-      alert('เปลี่ยนสถานะไม่สำเร็จ: ' + (e?.message || e));
+      await onStatusChange(requirement.id, newStatus);
+    } catch (e) {
+      alert('เปลี่ยนสถานะไม่สำเร็จ: ' + errText(e));
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -96,25 +113,39 @@ export default function IssueDetailModal({
   const handleQuickSave = async () => {
     try {
       setIsSaving(true);
-      await onUpdateIssue(
-        issue.id,
-        {
-          dev_assigned: devAssigned.trim() || null,
-          target_version: targetVersion.trim() || null,
-          remark: remark.trim() || null,
-          closed_by: devAssigned.trim() || null,
-          closed_version: targetVersion.trim() || null,
-          resolution: remark.trim() || undefined,
-        },
-        images
-      );
+      await onQuickUpdate(requirement.id, {
+        dev_assigned: devAssigned || null,
+        target_version: targetVersion.trim() || null,
+        remark: remark.trim() || null,
+      });
       setSaveSuccess('บันทึกข้อมูลเรียบร้อยแล้ว');
       setTimeout(() => setSaveSuccess(false), 2500);
-    } catch (e: any) {
-      alert('บันทึกไม่สำเร็จ: ' + (e?.message || e));
+      void refreshActivity();
+    } catch (e) {
+      alert('บันทึกไม่สำเร็จ: ' + errText(e));
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleComment = async () => {
+    const text = comment.trim();
+    if (!text) return;
+    try {
+      setIsCommenting(true);
+      await onAddComment(requirement.id, text);
+      setComment('');
+      await refreshActivity();
+    } catch (e) {
+      alert('บันทึกความเห็นไม่สำเร็จ: ' + errText(e));
+    } finally {
+      setIsCommenting(false);
+    }
+  };
+
+  const describe = (a: ActivityEntry): string => {
+    if (a.action === 'status_change') return `เปลี่ยนสถานะ ${a.from_status} → ${a.to_status}`;
+    return a.message || (a.action === 'created' ? 'สร้าง Requirement' : 'แก้ไข Requirement');
   };
 
   return (
@@ -124,14 +155,14 @@ export default function IssueDetailModal({
         <div className="bg-gradient-to-r from-[#044492] to-[#0086FF] p-5 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="font-mono text-sm font-black px-3 py-1 bg-white text-[#044492] rounded-xl shadow-xs">
-              {displayId}
+              {requirement.req_id}
             </span>
             <div>
               <span className="text-xs font-semibold text-blue-100">
-                {issue.type || 'Requirement'}
+                {requirement.type}
               </span>
               <h2 className="text-base sm:text-lg font-black leading-tight line-clamp-1">
-                {issue.title || issue.details}
+                {requirement.title}
               </h2>
             </div>
           </div>
@@ -139,7 +170,7 @@ export default function IssueDetailModal({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => onEdit(issue)}
+              onClick={() => onEdit(requirement)}
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
               title="แก้ไข Requirement"
             >
@@ -147,7 +178,7 @@ export default function IssueDetailModal({
             </button>
             <button
               type="button"
-              onClick={() => onDelete(issue.id)}
+              onClick={() => onDelete(requirement.id)}
               className="p-2 rounded-xl bg-white/10 hover:bg-red-500/80 text-white transition-colors"
               title="ลบ Requirement"
             >
@@ -172,7 +203,7 @@ export default function IssueDetailModal({
 
           <div className="flex flex-wrap items-center gap-1.5">
             {REQUIREMENT_STATUSES.map((st) => {
-              const isActive = issue.status === st;
+              const isActive = requirement.status === st;
               return (
                 <button
                   key={st}
@@ -201,7 +232,7 @@ export default function IssueDetailModal({
               <div className="text-[10px] font-bold text-slate-400 uppercase">Core Function</div>
               <div className="mt-1">
                 <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border ${coreMeta.badgeBg} ${coreMeta.badgeText} ${coreMeta.badgeBorder}`}>
-                  {issue.core_function || DEFAULT_CORE_FUNCTION}
+                  {requirement.core_function}
                 </span>
               </div>
             </div>
@@ -211,7 +242,7 @@ export default function IssueDetailModal({
               <div className="text-[10px] font-bold text-slate-400 uppercase">Module</div>
               <div className="text-xs font-bold text-slate-800 mt-1 flex items-center gap-1">
                 <Layers className="w-3.5 h-3.5 text-slate-500" />
-                {issue.module}
+                {requirement.module}
               </div>
             </div>
 
@@ -220,13 +251,13 @@ export default function IssueDetailModal({
               <div className="text-[10px] font-bold text-slate-400 uppercase">Priority</div>
               <div className="mt-1">
                 <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border ${
-                  issue.priority.includes('High')
+                  requirement.priority.includes('High')
                     ? 'bg-red-50 text-red-700 border-red-200'
-                    : issue.priority.includes('Medium')
+                    : requirement.priority.includes('Medium')
                     ? 'bg-amber-50 text-amber-700 border-amber-200'
                     : 'bg-blue-50 text-blue-700 border-blue-200'
                 }`}>
-                  {issue.priority}
+                  {requirement.priority}
                 </span>
               </div>
             </div>
@@ -235,11 +266,11 @@ export default function IssueDetailModal({
             <div>
               <div className="text-[10px] font-bold text-slate-400 uppercase">ผู้ขอ / วันที่ขอ</div>
               <div className="text-xs font-bold text-slate-800 mt-1">
-                {issue.requested_by || (issue as any).raise_by || 'Unknown'}
+                {requirement.requested_by || 'Unknown'}
               </div>
               <div className="text-[10px] text-slate-500">
-                {issue.request_date || (issue as any).raise_date
-                  ? new Date(issue.request_date || (issue as any).raise_date).toLocaleDateString('th-TH')
+                {requirement.request_date
+                  ? new Date(requirement.request_date).toLocaleDateString('th-TH')
                   : '-'}
               </div>
             </div>
@@ -252,7 +283,7 @@ export default function IssueDetailModal({
               รายละเอียดความต้องการ / User Story / Acceptance Criteria
             </h4>
             <div className="p-4 bg-white border border-slate-200 rounded-2xl whitespace-pre-wrap leading-relaxed text-slate-800 text-xs">
-              {issue.details || 'ไม่มีรายละเอียดเพิ่มเติม'}
+              {requirement.details || 'ไม่มีรายละเอียดเพิ่มเติม'}
             </div>
           </div>
 
@@ -281,7 +312,7 @@ export default function IssueDetailModal({
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 outline-none text-xs"
                 >
                   <option value="">-- ยังไม่มอบหมาย Dev --</option>
-                  {teamMembers.map((tm) => (
+                  {team.map((tm) => (
                     <option key={tm.id} value={tm.name}>
                       {tm.name} {tm.role ? `(${tm.role})` : ''}
                     </option>
@@ -359,12 +390,71 @@ export default function IssueDetailModal({
               </div>
             </div>
           )}
+
+          {/* Activity history & comments */}
+          <div className="space-y-2.5">
+            <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+              <History className="w-4 h-4 text-[#0086FF]" />
+              ประวัติการดำเนินงาน &amp; ความเห็น ({activity.length})
+            </h4>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void handleComment();
+                  }
+                }}
+                placeholder="เพิ่มความเห็น / อัปเดตความคืบหน้า..."
+                className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 outline-none text-xs focus:ring-2 focus:ring-[#0086FF]"
+              />
+              <button
+                type="button"
+                disabled={isCommenting || !comment.trim()}
+                onClick={handleComment}
+                className="px-4 py-2 bg-[#044492] hover:bg-[#0086FF] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 shrink-0"
+              >
+                <Send className="w-3.5 h-3.5" />
+                ส่ง
+              </button>
+            </div>
+            {activity.length === 0 ? (
+              <p className="text-[11px] text-slate-400 py-1">ยังไม่มีประวัติ</p>
+            ) : (
+              <ol className="space-y-2 border-l-2 border-slate-200 ml-1.5 pl-4">
+                {activity.map((a) => (
+                  <li key={a.id} className="relative">
+                    <span
+                      className={`absolute -left-[22px] top-1 w-2.5 h-2.5 rounded-full ring-2 ring-white ${
+                        a.action === 'comment'
+                          ? 'bg-amber-400'
+                          : a.action === 'status_change'
+                          ? 'bg-emerald-500'
+                          : 'bg-slate-400'
+                      }`}
+                    />
+                    <div className="text-[11px] text-slate-500">
+                      <b className="text-slate-700">{a.actor}</b> •{' '}
+                      {new Date(a.created_at).toLocaleString('th-TH')}
+                    </div>
+                    <div className="text-xs text-slate-800 whitespace-pre-wrap flex items-start gap-1">
+                      {a.action === 'comment' && <MessageSquare className="w-3 h-3 mt-0.5 text-amber-500 shrink-0" />}
+                      {describe(a)}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
         </div>
 
         {/* Modal Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
           <div className="text-[11px] text-slate-500">
-            สร้างเมื่อ: {issue.created_at ? new Date(issue.created_at).toLocaleString('th-TH') : '-'}
+            สร้างเมื่อ: {requirement.created_at ? new Date(requirement.created_at).toLocaleString('th-TH') : '-'}
           </div>
           <button
             type="button"

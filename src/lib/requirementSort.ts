@@ -14,7 +14,7 @@ export interface PriorityGroupMeta {
   divideClass: string;
   rowHoverClass: string;
   detailHoverClass: string;
-  logIdBadgeClass: string;
+  reqIdBadgeClass: string;
   pillBadgeClass: string;
   summaryActiveClass: string;
 }
@@ -34,7 +34,7 @@ export const PRIORITY_GROUPS: PriorityGroupMeta[] = [
     divideClass: 'divide-red-100/80',
     rowHoverClass: 'hover:bg-red-50/70',
     detailHoverClass: 'group-hover:text-red-950',
-    logIdBadgeClass: 'text-red-700 bg-red-50 border-red-200 group-hover:bg-red-600 group-hover:border-red-600 group-hover:text-white',
+    reqIdBadgeClass: 'text-red-700 bg-red-50 border-red-200 group-hover:bg-red-600 group-hover:border-red-600 group-hover:text-white',
     pillBadgeClass: 'bg-red-100 text-red-800 border-red-200',
     summaryActiveClass: 'bg-red-50/90 border-red-400 text-red-900 ring-2 ring-red-200/80',
   },
@@ -52,7 +52,7 @@ export const PRIORITY_GROUPS: PriorityGroupMeta[] = [
     divideClass: 'divide-amber-100/80',
     rowHoverClass: 'hover:bg-amber-50/70',
     detailHoverClass: 'group-hover:text-amber-950',
-    logIdBadgeClass: 'text-amber-800 bg-amber-50 border-amber-200 group-hover:bg-amber-600 group-hover:border-amber-600 group-hover:text-white',
+    reqIdBadgeClass: 'text-amber-800 bg-amber-50 border-amber-200 group-hover:bg-amber-600 group-hover:border-amber-600 group-hover:text-white',
     pillBadgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
     summaryActiveClass: 'bg-amber-50/90 border-amber-400 text-amber-950 ring-2 ring-amber-200/80',
   },
@@ -70,24 +70,24 @@ export const PRIORITY_GROUPS: PriorityGroupMeta[] = [
     divideClass: 'divide-sky-100/80',
     rowHoverClass: 'hover:bg-sky-50/70',
     detailHoverClass: 'group-hover:text-sky-950',
-    logIdBadgeClass: 'text-sky-700 bg-sky-50 border-sky-200 group-hover:bg-sky-600 group-hover:border-sky-600 group-hover:text-white',
+    reqIdBadgeClass: 'text-sky-700 bg-sky-50 border-sky-200 group-hover:bg-sky-600 group-hover:border-sky-600 group-hover:text-white',
     pillBadgeClass: 'bg-sky-100 text-sky-800 border-sky-200',
     summaryActiveClass: 'bg-sky-50/90 border-sky-400 text-sky-950 ring-2 ring-sky-200/80',
   },
 ];
 
-export function parseIssueNumber(reqId: string): number {
+export function parseReqNumber(reqId: string): number {
   return parseInt(reqId.replace(/\D/g, '') || '0', 10);
 }
 
-/** Sort requirements with non-Done/Closed items first, Done items always at the bottom. */
-export function sortIssuesClosedLast(
+/** Sort requirements with non-Done items first, Done items always at the bottom. */
+export function sortRequirementsDoneLast(
   list: Requirement[],
-  sortBy: 'log_id_asc' | 'log_id_desc' | 'status' = 'log_id_asc'
+  sortBy: 'req_id_asc' | 'req_id_desc' | 'status' = 'req_id_asc'
 ): Requirement[] {
   return [...list].sort((a, b) => {
-    const isClosedA = a.status === 'Done' || a.status === 'Closed' ? 1 : 0;
-    const isClosedB = b.status === 'Done' || b.status === 'Closed' ? 1 : 0;
+    const isClosedA = a.status === 'Done' ? 1 : 0;
+    const isClosedB = b.status === 'Done' ? 1 : 0;
     if (isClosedA !== isClosedB) return isClosedA - isClosedB;
 
     if (sortBy === 'status') {
@@ -95,8 +95,8 @@ export function sortIssuesClosedLast(
       if (cmp !== 0) return cmp;
     }
 
-    const numA = parseIssueNumber(a.req_id || (a as any).log_id || '');
-    const numB = parseIssueNumber(b.req_id || (b as any).log_id || '');
-    return sortBy === 'log_id_desc' ? numB - numA : numA - numB;
+    const numA = parseReqNumber(a.req_id || '');
+    const numB = parseReqNumber(b.req_id || '');
+    return sortBy === 'req_id_desc' ? numB - numA : numA - numB;
   });
 }
