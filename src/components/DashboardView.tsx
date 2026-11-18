@@ -242,42 +242,20 @@ export default function DashboardView({
 
   return (
     <div className="space-y-5">
-      {/* Dev is waiting for information: blinks until the requester answers */}
+      {/* Dev is waiting for information: a small blinking button until the Tester answers */}
       {needsInfo.length > 0 && (
-        <section className="need-info-beacon rounded-xl border-2 overflow-hidden" aria-label="Requirement ที่ Dev ขอข้อมูลเพิ่ม">
-          <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className="h-10 w-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-card">
-                <CircleHelp className="w-6 h-6" aria-hidden />
-              </span>
-              <div>
-                <h3 className="text-base font-bold text-orange-950">Dev ขอข้อมูลเพิ่ม {needsInfo.length} เรื่อง</h3>
-                <p className="text-sm text-orange-900/80">ผู้เปิด Requirement ต้องให้ข้อมูลเพื่อให้ Dev ทำงานต่อได้</p>
-              </div>
-            </div>
-            <button type="button" onClick={onFilterNeedsInfo} className="btn bg-orange-500 text-white hover:bg-orange-600 shadow-card">
-              ดูทั้งหมด
-              <ArrowRight className="w-4 h-4" aria-hidden />
-            </button>
-          </div>
-          <ul className="divide-y divide-orange-200/70 bg-white/70">
-            {needsInfo.slice(0, 5).map((r) => (
-              <li key={r.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelectRequirement(r)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-orange-50 transition-colors flex flex-wrap items-center gap-x-4 gap-y-1"
-                >
-                  <span className="font-mono text-xs font-bold text-orange-800 bg-orange-100 border border-orange-200 px-2 py-0.5 rounded-md">{r.req_id}</span>
-                  <span className="font-semibold text-slate-900 flex-1 min-w-[200px] truncate">{r.title}</span>
-                  <span className="text-xs text-slate-600">
-                    <b className="text-orange-800">{r.info_requested_by || 'Dev'}</b> ถาม <b>{r.requested_by}</b> · {formatDateTime(r.info_requested_at)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <div>
+          <button
+            type="button"
+            onClick={onFilterNeedsInfo}
+            className="need-info-beacon inline-flex items-center gap-2 rounded-full border-2 px-3.5 py-1.5 text-sm font-bold text-orange-900"
+            title="ดู Requirement ที่ Dev ขอข้อมูลเพิ่ม"
+          >
+            <CircleHelp className="w-4 h-4" aria-hidden />
+            Dev ขอข้อมูลเพิ่ม {needsInfo.length} เรื่อง
+            <ArrowRight className="w-4 h-4" aria-hidden />
+          </button>
+        </div>
       )}
 
       {/* KPI tiles */}

@@ -265,14 +265,14 @@ export interface ActivityEntry {
   created_at: string;
 }
 
-/** Default requesters (people who open a requirement). */
+/** Default Testers (the people who open a requirement). */
 export const DEFAULT_TEAM: Array<{ name: string; role: string }> = [
-  { name: 'Aoy', role: 'Project Lead' },
-  { name: 'Kampon', role: 'Dev / Lead' },
-  { name: 'Kraijate', role: 'QA / Tester' },
-  { name: 'Tukta', role: 'Dev / Member' },
-  { name: 'Nat', role: 'Dev / Member' },
+  { name: 'Aoy', role: 'Tester' },
+  { name: 'Kampon', role: 'Tester' },
+  { name: 'Kraijate', role: 'Tester' },
+  { name: 'Tukta', role: 'Tester' },
+  { name: 'Nat', role: 'Tester' },
 ];
 
 /** Default developers (kept separate from requesters; more can be added in the app). */
-export const DEFAULT_DEVELOPERS: string[] = ['Kampon', 'Tukta', 'Nat'];
+export const DEFAULT_DEVELOPERS: string[] = [];

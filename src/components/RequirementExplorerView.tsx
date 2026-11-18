@@ -258,10 +258,10 @@ export default function RequirementExplorerView({
           <select
             value={filter.requested_by}
             onChange={(e) => onFilterChange((prev) => ({ ...prev, requested_by: e.target.value }))}
-            aria-label="กรองตามผู้ขอ"
+            aria-label="กรองตาม Tester"
             className={selectCls}
           >
-            <option value="">ผู้ขอทั้งหมด</option>
+            <option value="">Tester ทั้งหมด</option>
             {team.map((t) => (
               <option key={t.id} value={t.name}>
                 {t.name}
@@ -504,7 +504,7 @@ export default function RequirementExplorerView({
                   <SortHeader label="สถานะ" sortKey="status" sort={sort} onSort={onSort} className="w-40" />
                   <SortHeader label="หัวข้อ" sortKey="title" sort={sort} onSort={onSort} className="min-w-[260px]" />
                   <SortHeader label="Dev" sortKey="dev_assigned" sort={sort} onSort={onSort} className="w-36" />
-                  <SortHeader label="ผู้ขอ / วันที่-เวลา" sortKey="request_date" sort={sort} onSort={onSort} className="w-44" />
+                  <SortHeader label="Tester / วันที่-เวลา" sortKey="request_date" sort={sort} onSort={onSort} className="w-44" />
                   <th className="py-3 px-4 text-right w-28 font-semibold text-slate-600">จัดการ</th>
                 </tr>
               </thead>

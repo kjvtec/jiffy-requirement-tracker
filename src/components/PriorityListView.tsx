@@ -307,7 +307,7 @@ export default function PriorityListView({
                         <SortHeader label="หัวข้อ" sortKey="title" sort={sort} onSort={onSort} className="min-w-[240px]" />
                         <SortHeader label="สถานะ" sortKey="status" sort={sort} onSort={onSort} className="w-44" />
                         <SortHeader label="Dev" sortKey="dev_assigned" sort={sort} onSort={onSort} className="w-32" />
-                        <SortHeader label="ผู้ขอ · วันที่-เวลา" sortKey="request_date" sort={sort} onSort={onSort} className="w-48" />
+                        <SortHeader label="Tester · วันที่-เวลา" sortKey="request_date" sort={sort} onSort={onSort} className="w-48" />
                         <th className="py-3 px-4 w-36 text-right font-semibold text-slate-600">รายละเอียด</th>
                       </tr>
                     </thead>

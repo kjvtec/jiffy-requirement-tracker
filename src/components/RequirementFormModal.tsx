@@ -151,7 +151,7 @@ export default function RequirementFormModal({
       return;
     }
     if (!requestedBy) {
-      alert('กรุณาเลือกผู้ขอ');
+      alert('กรุณาเลือก Tester');
       return;
     }
 
@@ -202,7 +202,7 @@ export default function RequirementFormModal({
       setNewMemberName('');
       setShowAddMember(false);
     } catch (err) {
-      alert('เพิ่มผู้ขอไม่สำเร็จ: ' + errText(err));
+      alert('เพิ่ม Tester ไม่สำเร็จ: ' + errText(err));
     }
   };
 
@@ -373,6 +373,12 @@ export default function RequirementFormModal({
             </div>
           </div>
 
+          {/* Images */}
+          <div>
+            <label className={label}>รูปภาพ Wireframe / Mockup / เอกสารประกอบ (กด Ctrl+V เพื่อแปะได้ทันที)</label>
+            <ImageUploader images={images} onChange={setImages} folder={initialData?.req_id} bucketName="requirement-attachments" />
+          </div>
+
           {/* Details */}
           <div>
             <label className={label}>รายละเอียดความต้องการ / User Story / Acceptance Criteria</label>
@@ -391,9 +397,9 @@ export default function RequirementFormModal({
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-semibold text-amber-900 inline-flex items-center gap-1.5">
                   <UserRound className="w-4 h-4" aria-hidden />
-                  ผู้ขอ (Requested By)
+                  Tester (ผู้เปิด Requirement)
                 </label>
-                {addToggle(showAddMember, () => setShowAddMember((v) => !v), 'เพิ่มผู้ขอ')}
+                {addToggle(showAddMember, () => setShowAddMember((v) => !v), 'เพิ่ม Tester')}
               </div>
               {showAddMember ? (
                 <div className="flex gap-1.5">
@@ -402,7 +408,7 @@ export default function RequirementFormModal({
                     value={newMemberName}
                     onChange={(e) => setNewMemberName(e.target.value)}
                     onKeyDown={keyEnter(handleAddMember)}
-                    placeholder="ชื่อผู้ขอใหม่"
+                    placeholder="ชื่อ Tester ใหม่"
                     className="field flex-1"
                   />
                   <button type="button" onClick={handleAddMember} className="btn-brand shrink-0">
@@ -466,14 +472,8 @@ export default function RequirementFormModal({
                   ))}
                 </select>
               )}
-              <p className="text-xs text-indigo-800/80 mt-2">รายชื่อ Dev แยกจากรายชื่อผู้ขอ เพิ่มได้จากปุ่มด้านบน</p>
+              <p className="text-xs text-indigo-800/80 mt-2">รายชื่อ Dev แยกจากรายชื่อ Tester เพิ่มได้จากปุ่มด้านบน</p>
             </div>
-          </div>
-
-          {/* Images */}
-          <div>
-            <label className={label}>รูปภาพ Wireframe / Mockup / เอกสารประกอบ (กด Ctrl+V เพื่อแปะได้ทันที)</label>
-            <ImageUploader images={images} onChange={setImages} folder={initialData?.req_id} bucketName="requirement-attachments" />
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">

@@ -128,6 +128,28 @@ export default function RequirementDetailModal({
     [developers, team]
   );
 
+  /** Names grouped so Testers and Devs are never mixed together in a list. */
+  const nameOptions = (
+    <>
+      <optgroup label="Tester">
+        {team.map((t) => (
+          <option key={`t-${t.id}`} value={t.name}>
+            {t.name}
+          </option>
+        ))}
+      </optgroup>
+      {developers.length > 0 && (
+        <optgroup label="Dev">
+          {developers.map((d) => (
+            <option key={`d-${d.id}`} value={d.name}>
+              {d.name}
+            </option>
+          ))}
+        </optgroup>
+      )}
+    </>
+  );
+
   // Re-sync local fields whenever a different requirement is shown.
   useEffect(() => {
     if (!requirement) return;
@@ -364,11 +386,7 @@ export default function RequirementDetailModal({
                 <div className="flex flex-wrap items-center gap-2">
                   <select value={replyBy} onChange={(e) => setReplyBy(e.target.value)} className="field !w-auto font-semibold" aria-label="ผู้ให้ข้อมูล">
                     <option value="">-- ผู้ให้ข้อมูล --</option>
-                    {everyone.map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
+                    {nameOptions}
                   </select>
                   <button type="button" disabled={busyInfo || !replyText.trim()} onClick={handleReply} className="btn-primary">
                     <CheckCheck className="w-4 h-4" aria-hidden />
@@ -402,7 +420,7 @@ export default function RequirementDetailModal({
               </div>
             </div>
             <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-              <div className="text-xs font-semibold text-amber-800">ผู้ขอ / เปิดเมื่อ</div>
+              <div className="text-xs font-semibold text-amber-800">Tester / เปิดเมื่อ</div>
               <div className="mt-1 font-bold text-slate-800 inline-flex items-center gap-1.5">
                 <UserRound className="w-4 h-4 text-amber-600" aria-hidden />
                 {requirement.requested_by || '-'}
@@ -551,11 +569,7 @@ export default function RequirementDetailModal({
               />
               <select value={commentBy} onChange={(e) => setCommentBy(e.target.value)} className="field !w-auto font-semibold" aria-label="ผู้แสดงความเห็น">
                 <option value="">-- ชื่อผู้ส่ง --</option>
-                {everyone.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
+                {nameOptions}
               </select>
               <button type="button" disabled={isCommenting || !comment.trim()} onClick={handleComment} className="btn-brand">
                 <Send className="w-4 h-4" aria-hidden />

@@ -204,19 +204,14 @@ USING (bucket_id = 'requirement-attachments');
 
 -- 10. Seed: team members ---------------------------------------------------
 INSERT INTO public.requirement_team_members (name, role) VALUES
-    ('Aoy', 'Project Lead'),
-    ('Kampon', 'Dev / Lead'),
-    ('Kraijate', 'QA / Tester'),
-    ('Tukta', 'Dev / Member'),
-    ('Nat', 'Dev / Member')
+    ('Aoy', 'Tester'),
+    ('Kampon', 'Tester'),
+    ('Kraijate', 'Tester'),
+    ('Tukta', 'Tester'),
+    ('Nat', 'Tester')
 ON CONFLICT (name) DO NOTHING;
 
--- 10b. Seed: developers
-INSERT INTO public.requirement_developers (name) VALUES
-    ('Kampon'),
-    ('Tukta'),
-    ('Nat')
-ON CONFLICT (name) DO NOTHING;
+-- 10b. Developers start empty: add them from the app (Dev list is separate from Testers).
 
 -- 11. Seed: default modules per Core Function -------------------------------
 INSERT INTO public.requirement_modules (core_function, name) VALUES

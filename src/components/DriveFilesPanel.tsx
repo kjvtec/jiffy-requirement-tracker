@@ -14,6 +14,7 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
+import { zipSync } from 'fflate';
 import type { RequirementFile } from '@/types';
 import { fetchDriveStatus, uploadToDrive, type DriveStatus } from '@/lib/driveClient';
 import type { NewFile } from '@/lib/data/store';
@@ -38,6 +39,20 @@ function iconFor(file: RequirementFile): { icon: LucideIcon; tone: string } {
   return { icon: FileIcon, tone: 'bg-slate-100 text-slate-600' };
 }
 
+const ZIP_REQUIRED = new Set(['exe', 'bat', 'cmd', 'com', 'msi', 'scr', 'vbs', 'ps1', 'sh', 'jar', 'js', 'dll', 'apk']);
+
+/** Program/script files are not accepted as-is: wrap them in a .zip automatically. */
+async function zipIfNeeded(file: File): Promise<{ file: File; zipped: boolean }> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  if (!ZIP_REQUIRED.has(ext)) return { file, zipped: false };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const zipped = zipSync({ [file.name]: bytes }, { level: 6 });
+  return {
+    file: new File([zipped.buffer as ArrayBuffer], `${file.name}.zip`, { type: 'application/zip' }),
+    zipped: true,
+  };
+}
+
 function formatSize(bytes: number): string {
   if (!bytes) return '';
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -56,6 +71,7 @@ export default function DriveFilesPanel({
   const [uploader, setUploader] = useState(defaultUploader);
   const [busy, setBusy] = useState<{ name: string; percent: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
@@ -80,9 +96,14 @@ export default function DriveFilesPanel({
       return;
     }
     setError(null);
-    for (const file of picked) {
+    setNotice(null);
+    for (const original of picked) {
+      let file = original;
       try {
-        setBusy({ name: file.name, percent: 0 });
+        setBusy({ name: original.name, percent: 0 });
+        const prepared = await zipIfNeeded(original);
+        file = prepared.file;
+        if (prepared.zipped) setNotice(`แปลง ${original.name} เป็น ${file.name} ให้อัตโนมัติ`);
         const uploaded = await uploadToDrive(file, (percent) => setBusy({ name: file.name, percent }));
         await onAdd({
           file_name: uploaded.name,
@@ -221,7 +242,7 @@ export default function DriveFilesPanel({
               {busy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <CloudUpload className="w-4 h-4" aria-hidden />}
               {busy ? 'กำลังอัปโหลด...' : 'เลือกไฟล์เพื่ออัปโหลด'}
             </button>
-            <span className="text-xs text-slate-500">หรือลากไฟล์มาวางที่นี่
+            <span className="text-xs text-slate-500">หรือลากไฟล์มาวางที่นี่ (ไฟล์โปรแกรม/สคริปต์ เช่น .exe จะถูกบีบเป็น .zip ให้อัตโนมัติ)
               {status?.maxBytes ? ` (ไฟล์ละไม่เกิน ${Math.round(status.maxBytes / 1024 / 1024)} MB)` : ''}
             </span>
           </div>
@@ -238,6 +259,10 @@ export default function DriveFilesPanel({
             </div>
           )}
         </div>
+      )}
+
+      {notice && (
+        <p className="text-sm text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2">{notice}</p>
       )}
 
       {error && (
