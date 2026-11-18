@@ -18,6 +18,7 @@ import {
   type TeamMember,
 } from '@/types';
 import ImageUploader from './ImageUploader';
+import RichTextarea from './RichTextarea';
 
 export interface FormPresets {
   core?: CoreFunctionType;
@@ -228,7 +229,7 @@ export default function RequirementFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-5xl w-full border border-line shadow-pop overflow-hidden my-8 max-h-[92vh] flex flex-col">
+      <div className="bg-white rounded-2xl max-w-[1280px] w-[96vw] h-[94vh] border border-line shadow-pop overflow-hidden my-2 flex flex-col">
         <div className="bg-gradient-to-r from-jiffy-navy to-[#0a5fc4] p-5 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="h-10 w-10 rounded-xl bg-jiffy-yellow text-jiffy-ink flex items-center justify-center shadow-card">
@@ -370,12 +371,13 @@ export default function RequirementFormModal({
           {/* Details */}
           <div>
             <label className={label}>รายละเอียดความต้องการ / User Requirement</label>
-            <textarea
-              rows={5}
+            <RichTextarea
               value={details}
-              onChange={(e) => setDetails(e.target.value)}
-              placeholder="ระบุพฤติกรรมของระบบที่ต้องการ เงื่อนไขการคำนวณ หรือ Acceptance Criteria"
-              className="field leading-relaxed"
+              onChange={setDetails}
+              placeholder="ระบุพฤติกรรมของระบบที่ต้องการ เงื่อนไขการคำนวณ หรือ Acceptance Criteria (รองรับตัวหนา ลิสต์ แปะลิงก์ URL อัตโนมัติ)"
+              rows={6}
+              minHeight="150px"
+              theme="jiffy"
             />
           </div>
 
