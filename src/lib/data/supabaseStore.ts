@@ -268,4 +268,26 @@ export const supabaseStore: DataStore = {
       error
     );
   },
+
+  async renameDeveloper(oldName, newName) {
+    const { error } = await supabase
+      .from('requirement_developers')
+      .update({ name: newName })
+      .eq('name', oldName);
+    fail(error?.code === UNIQUE_VIOLATION ? 'มี Dev ชื่อนี้อยู่แล้ว' : 'แก้ชื่อ Dev ไม่สำเร็จ', error);
+
+    const { error: reqErr } = await supabase
+      .from('requirements')
+      .update({ dev_assigned: newName })
+      .eq('dev_assigned', oldName);
+    fail('อัปเดตชื่อ Dev ใน Requirement ไม่สำเร็จ', reqErr);
+  },
+
+  async deleteDeveloper(name) {
+    const { error } = await supabase
+      .from('requirement_developers')
+      .delete()
+      .eq('name', name);
+    fail('ลบ Dev ไม่สำเร็จ', error);
+  },
 };

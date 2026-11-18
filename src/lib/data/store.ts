@@ -70,4 +70,6 @@ export interface DataStore {
   deleteModule(core: CoreFunctionType, name: string): Promise<void>;
   addTeamMember(name: string, role?: string): Promise<void>;
   addDeveloper(name: string): Promise<void>;
+  renameDeveloper(oldName: string, newName: string): Promise<void>;
+  deleteDeveloper(name: string): Promise<void>;
 }

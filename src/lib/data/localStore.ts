@@ -282,4 +282,30 @@ export const localStore: DataStore = {
       s.developers.push({ id: Date.now(), name });
     });
   },
+
+  async renameDeveloper(oldName, newName) {
+    mutate((s) => {
+      const dev = s.developers.find((d) => d.name === oldName);
+      if (!dev) throw new Error('ไม่พบข้อมูล Dev');
+      if (
+        s.developers.some(
+          (d) => d.name.toLowerCase() === newName.toLowerCase() && d.name.toLowerCase() !== oldName.toLowerCase()
+        )
+      ) {
+        throw new Error('มี Dev ชื่อนี้อยู่แล้ว');
+      }
+      dev.name = newName;
+      for (const r of s.requirements) {
+        if (r.dev_assigned === oldName) {
+          r.dev_assigned = newName;
+        }
+      }
+    });
+  },
+
+  async deleteDeveloper(name) {
+    mutate((s) => {
+      s.developers = s.developers.filter((d) => d.name !== name);
+    });
+  },
 };

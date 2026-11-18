@@ -284,6 +284,9 @@ export default function HomePage() {
                   setActiveTab('priority');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
+                onRenameDeveloper={t.renameDeveloper}
+                onAddDeveloper={t.addDeveloper}
+                onDeleteDeveloper={t.deleteDeveloper}
               />
             )}
 

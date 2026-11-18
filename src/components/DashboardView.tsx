@@ -13,6 +13,10 @@ import {
   ListOrdered,
   PieChart,
   Users,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -43,6 +47,9 @@ interface DashboardViewProps {
   onFilterNeedsInfo: () => void;
   onGoToTable: () => void;
   onGoToPriorityList: () => void;
+  onRenameDeveloper?: (oldName: string, newName: string) => Promise<void>;
+  onAddDeveloper?: (name: string) => Promise<void>;
+  onDeleteDeveloper?: (name: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 /** Counts up smoothly when the target changes. */
@@ -140,9 +147,78 @@ export default function DashboardView({
   onFilterNeedsInfo,
   onGoToTable,
   onGoToPriorityList,
+  onRenameDeveloper,
+  onAddDeveloper,
+  onDeleteDeveloper,
 }: DashboardViewProps) {
   const [manualCore, setManualCore] = useState<CoreFunctionType | null>(null);
   const [urgentCollapsed, setUrgentCollapsed] = useState(false);
+
+  // Developer management state
+  const [editingDev, setEditingDev] = useState<{ oldName: string; newName: string; total: number } | null>(null);
+  const [addDevOpen, setAddDevOpen] = useState(false);
+  const [newDevName, setNewDevName] = useState('');
+  const [devActionLoading, setDevActionLoading] = useState(false);
+  const [devError, setDevError] = useState<string | null>(null);
+
+  const handleSaveRenameDev = async () => {
+    if (!editingDev || !onRenameDeveloper) return;
+    const clean = editingDev.newName.trim();
+    if (!clean) {
+      setDevError('กรุณาระบุชื่อ Developer');
+      return;
+    }
+    if (clean === editingDev.oldName) {
+      setEditingDev(null);
+      return;
+    }
+    try {
+      setDevActionLoading(true);
+      setDevError(null);
+      await onRenameDeveloper(editingDev.oldName, clean);
+      setEditingDev(null);
+    } catch (err) {
+      setDevError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDevActionLoading(false);
+    }
+  };
+
+  const handleSaveAddDev = async () => {
+    if (!onAddDeveloper) return;
+    const clean = newDevName.trim();
+    if (!clean) {
+      setDevError('กรุณาระบุชื่อ Developer');
+      return;
+    }
+    try {
+      setDevActionLoading(true);
+      setDevError(null);
+      await onAddDeveloper(clean);
+      setNewDevName('');
+      setAddDevOpen(false);
+    } catch (err) {
+      setDevError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDevActionLoading(false);
+    }
+  };
+
+  const handleDeleteDev = async (name: string) => {
+    if (!onDeleteDeveloper) return;
+    if (!confirm(`คุณต้องการลบ Dev "${name}" ออกจากระบบใช่หรือไม่?`)) return;
+    try {
+      setDevActionLoading(true);
+      const res = await onDeleteDeveloper(name);
+      if (!res.success && res.message) {
+        alert(res.message);
+      }
+    } catch (err) {
+      alert('ลบ Dev ไม่สำเร็จ: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setDevActionLoading(false);
+    }
+  };
 
   const stats = useMemo(() => {
     const byStatus = Object.fromEntries(
@@ -423,41 +499,110 @@ export default function DashboardView({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Dev workload */}
         <section className="card p-4 sm:p-5 space-y-3" aria-label="ภาระงาน Dev">
-          <div className="flex items-start justify-between gap-2">
-            <PanelTitle icon={Users} tone="bg-gradient-to-br from-indigo-400 to-violet-600" title="ภาระงาน Developer" hint={`${developers.length} คน · ยังไม่มอบหมาย ${unassigned} เรื่อง`} />
+          <div className="flex items-center justify-between gap-2">
+            <PanelTitle
+              icon={Users}
+              tone="bg-gradient-to-br from-indigo-400 to-violet-600"
+              title="ภาระงาน Developer"
+              hint={`${developers.length} คน · ยังไม่มอบหมาย ${unassigned} เรื่อง`}
+            />
+            {onAddDeveloper && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDevError(null);
+                  setNewDevName('');
+                  setAddDevOpen(true);
+                }}
+                className="btn-secondary !py-1 !px-2.5 text-xs font-semibold inline-flex items-center gap-1.5"
+                title="เพิ่ม Developer ใหม่"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>เพิ่ม Dev</span>
+              </button>
+            )}
           </div>
           {devWorkload.length === 0 ? (
             <p className="text-sm text-slate-400 py-6 text-center">ยังไม่มีรายชื่อ Dev</p>
           ) : (
             <ul className="space-y-2.5">
               {devWorkload.map((d, i) => (
-                <li key={d.name}>
-                  <button type="button" onClick={() => onFilterByDev(d.name)} className="w-full text-left rounded-lg border border-line p-3 hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <span className={`h-9 w-9 rounded-full bg-gradient-to-br ${AVATAR_TONES[i % AVATAR_TONES.length]} text-white flex items-center justify-center font-bold shadow-card`}>
-                        {d.name.charAt(0).toUpperCase()}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-slate-900">
-                          {d.name} <span className="text-xs font-normal text-slate-500">รับผิดชอบ {d.total} เรื่อง</span>
-                        </div>
-                        <div className="mt-1.5 h-2 rounded-full bg-slate-100 overflow-hidden flex">
-                          {d.total > 0 && (
-                            <>
-                              <div className="bg-indigo-500" style={{ width: `${(d.inDev / d.total) * 100}%` }} />
-                              <div className="bg-amber-400" style={{ width: `${(d.testing / d.total) * 100}%` }} />
-                              <div className="bg-emerald-500" style={{ width: `${(d.done / d.total) * 100}%` }} />
-                            </>
-                          )}
-                        </div>
+                <li
+                  key={d.name}
+                  className="flex items-center rounded-lg border border-line bg-white hover:border-indigo-300 hover:bg-indigo-50/20 transition-all overflow-hidden group"
+                >
+                  <button
+                    type="button"
+                    onClick={() => onFilterByDev(d.name)}
+                    className="flex-1 text-left p-3 flex items-center gap-3 min-w-0"
+                    title={`คลิกเพื่อกรองงานของ ${d.name}`}
+                  >
+                    <span
+                      className={`h-9 w-9 rounded-full bg-gradient-to-br ${
+                        AVATAR_TONES[i % AVATAR_TONES.length]
+                      } text-white flex items-center justify-center font-bold shadow-card shrink-0`}
+                    >
+                      {d.name.charAt(0).toUpperCase()}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-slate-900 truncate">
+                        {d.name} <span className="text-xs font-normal text-slate-500">รับผิดชอบ {d.total} เรื่อง</span>
                       </div>
-                      <div className="flex gap-1 text-xs font-semibold shrink-0">
-                        <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700" title="กำลังพัฒนา">{d.inDev}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="ทดสอบ">{d.testing}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700" title="เสร็จ">{d.done}</span>
+                      <div className="mt-1.5 h-2 rounded-full bg-slate-100 overflow-hidden flex">
+                        {d.total > 0 && (
+                          <>
+                            <div className="bg-indigo-500" style={{ width: `${(d.inDev / d.total) * 100}%` }} />
+                            <div className="bg-amber-400" style={{ width: `${(d.testing / d.total) * 100}%` }} />
+                            <div className="bg-emerald-500" style={{ width: `${(d.done / d.total) * 100}%` }} />
+                          </>
+                        )}
                       </div>
                     </div>
+                    <div className="flex gap-1 text-xs font-semibold shrink-0">
+                      <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700" title="กำลังพัฒนา">
+                        {d.inDev}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="ทดสอบ">
+                        {d.testing}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700" title="เสร็จ">
+                        {d.done}
+                      </span>
+                    </div>
                   </button>
+
+                  {/* Actions: Edit & Delete */}
+                  <div className="pr-2 flex items-center gap-1 shrink-0">
+                    {onRenameDeveloper && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDevError(null);
+                          setEditingDev({ oldName: d.name, newName: d.name, total: d.total });
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-100 transition-colors"
+                        title={`แก้ไขชื่อ ${d.name}`}
+                        aria-label={`แก้ไขชื่อ ${d.name}`}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {onDeleteDeveloper && d.total === 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDev(d.name);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        title={`ลบ ${d.name} (ไม่มีงานค้าง)`}
+                        aria-label={`ลบ ${d.name}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -498,6 +643,144 @@ export default function DashboardView({
           </button>
         </section>
       </div>
+
+      {/* Modal: Edit Developer Name */}
+      {editingDev && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-line shadow-pop overflow-hidden p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <h3 className="text-base font-bold text-slate-900 inline-flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-jiffy-blue" />
+                แก้ไขชื่อ Developer
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingDev(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {devError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium">
+                {devError}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">ชื่อเดิม</label>
+              <div className="field bg-slate-100 font-semibold text-slate-700">{editingDev.oldName}</div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                ชื่อใหม่ <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={editingDev.newName}
+                onChange={(e) => setEditingDev({ ...editingDev, newName: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveRenameDev();
+                }}
+                className="field font-semibold"
+                placeholder="ระบุชื่อ Dev ใหม่"
+                autoFocus
+              />
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 leading-relaxed">
+              💡 <strong>ระบบจะอัปเดตให้อัตโนมัติ:</strong> การเปลี่ยนชื่อจะอัปเดตงาน Requirement ที่มอบหมายให้{' '}
+              <strong>{editingDev.oldName}</strong> ({editingDev.total} เรื่อง) เป็นชื่อใหม่โดยอัตโนมัติ
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingDev(null)}
+                className="btn-secondary"
+                disabled={devActionLoading}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveRenameDev}
+                className="btn-primary"
+                disabled={
+                  devActionLoading || !editingDev.newName.trim() || editingDev.newName.trim() === editingDev.oldName
+                }
+              >
+                {devActionLoading ? 'กำลังบันทึก...' : 'บันทึกชื่อใหม่'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add Developer */}
+      {addDevOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-line shadow-pop overflow-hidden p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <h3 className="text-base font-bold text-slate-900 inline-flex items-center gap-2">
+                <Users className="w-4 h-4 text-jiffy-blue" />
+                เพิ่ม Developer ใหม่
+              </h3>
+              <button
+                type="button"
+                onClick={() => setAddDevOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {devError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium">
+                {devError}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                ชื่อ Dev <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={newDevName}
+                onChange={(e) => setNewDevName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveAddDev();
+                }}
+                className="field font-semibold"
+                placeholder="เช่น K.Somchai"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setAddDevOpen(false)}
+                className="btn-secondary"
+                disabled={devActionLoading}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAddDev}
+                className="btn-primary"
+                disabled={devActionLoading || !newDevName.trim()}
+              >
+                {devActionLoading ? 'กำลังเพิ่ม...' : 'เพิ่ม Dev'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

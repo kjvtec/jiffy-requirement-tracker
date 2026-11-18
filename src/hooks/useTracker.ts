@@ -236,6 +236,32 @@ export function useTracker() {
     setDevelopers(snap.developers);
   }, []);
 
+  const renameDeveloper = useCallback(async (oldName: string, newName: string) => {
+    await store.renameDeveloper(oldName, newName);
+    setDevelopers((prev) =>
+      prev.map((d) => (d.name === oldName ? { ...d, name: newName } : d))
+    );
+    setRequirements((prev) =>
+      prev.map((r) => (r.dev_assigned === oldName ? { ...r, dev_assigned: newName } : r))
+    );
+  }, []);
+
+  const deleteDeveloper = useCallback(
+    async (name: string): Promise<{ success: boolean; message?: string }> => {
+      const used = requirements.filter((r) => r.dev_assigned === name).length;
+      if (used > 0) {
+        return {
+          success: false,
+          message: `ไม่สามารถลบ Dev "${name}" ได้ เนื่องจากมี Requirement รับผิดชอบอยู่ ${used} เรื่อง`,
+        };
+      }
+      await store.deleteDeveloper(name);
+      setDevelopers((prev) => prev.filter((d) => d.name !== name));
+      return { success: true };
+    },
+    [requirements]
+  );
+
   /* ---------- derived ---------- */
   const nextReqIdPreview = useMemo(() => {
     let max = 0;
@@ -281,6 +307,8 @@ export function useTracker() {
     deleteModule,
     addTeamMember,
     addDeveloper,
+    renameDeveloper,
+    deleteDeveloper,
   };
 }
 
