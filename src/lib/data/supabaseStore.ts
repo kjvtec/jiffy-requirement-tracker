@@ -61,15 +61,15 @@ export const supabaseStore: DataStore = {
   async load(): Promise<TrackerSnapshot> {
     const [reqRes, modRes, teamRes] = await Promise.all([
       supabase.from('requirements').select(REQUIREMENT_SELECT).order('created_at', { ascending: false }),
-      supabase.from('modules').select('id, core_function, name').order('name'),
-      supabase.from('team_members').select('id, name, role').order('name'),
+      supabase.from('requirement_modules').select('id, core_function, name').order('name'),
+      supabase.from('requirement_team_members').select('id, name, role').order('name'),
     ]);
 
     if (reqRes.error) throw new Error(`โหลดข้อมูล Requirement ไม่สำเร็จ: ${reqRes.error.message}`);
 
     const missing: string[] = [];
-    if (modRes.error) missing.push('modules');
-    if (teamRes.error) missing.push('team_members');
+    if (modRes.error) missing.push('requirement_modules');
+    if (teamRes.error) missing.push('requirement_team_members');
 
     return {
       requirements: (reqRes.data || []).map(mapRequirement),
@@ -152,13 +152,13 @@ export const supabaseStore: DataStore = {
   },
 
   async addModule(core, name) {
-    const { error } = await supabase.from('modules').insert({ core_function: core, name });
+    const { error } = await supabase.from('requirement_modules').insert({ core_function: core, name });
     fail(error?.code === UNIQUE_VIOLATION ? 'มีโมดูลชื่อนี้อยู่แล้ว' : 'เพิ่มโมดูลไม่สำเร็จ', error);
   },
 
   async renameModule(core, oldName, newName) {
     const { error } = await supabase
-      .from('modules')
+      .from('requirement_modules')
       .update({ name: newName })
       .eq('core_function', core)
       .eq('name', oldName);
@@ -173,12 +173,12 @@ export const supabaseStore: DataStore = {
   },
 
   async deleteModule(core, name) {
-    const { error } = await supabase.from('modules').delete().eq('core_function', core).eq('name', name);
+    const { error } = await supabase.from('requirement_modules').delete().eq('core_function', core).eq('name', name);
     fail('ลบโมดูลไม่สำเร็จ', error);
   },
 
   async addTeamMember(name, role) {
-    const { error } = await supabase.from('team_members').insert({ name, role: role || null });
+    const { error } = await supabase.from('requirement_team_members').insert({ name, role: role || null });
     fail(error?.code === UNIQUE_VIOLATION ? 'มีชื่อนี้อยู่ในทีมแล้ว' : 'เพิ่มสมาชิกไม่สำเร็จ', error);
   },
 };

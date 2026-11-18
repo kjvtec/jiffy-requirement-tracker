@@ -38,8 +38,9 @@ supabase/requirement_schema.sql   schema + seed (รันซ้ำได้ / m
 ### 1) เตรียม Supabase
 เปิด **SQL Editor** แล้วรันไฟล์ [`supabase/requirement_schema.sql`](supabase/requirement_schema.sql) ทั้งไฟล์
 (รันซ้ำได้ปลอดภัย รวมถึงบนโปรเจกต์ที่เคยรัน schema เวอร์ชันเก่ามาแล้ว) จะสร้าง
-`requirements`, `requirement_images`, `requirement_activity`, `modules`, `team_members`,
+`requirements`, `requirement_images`, `requirement_activity`, `requirement_modules`, `requirement_team_members`,
 sequence ของ Req ID และ Storage bucket `requirement-attachments`
+(ใช้ตาราง `requirement_modules` / `requirement_team_members` แยกต่างหาก จึงไม่ไปแตะตาราง `modules` / `team_members` ของ Issue Tracker ถ้าใช้ Supabase โปรเจกต์เดียวกัน)
 
 ### 2) ตั้งค่า Environment Variables
 คัดลอก `.env.example` เป็น `.env.local`
