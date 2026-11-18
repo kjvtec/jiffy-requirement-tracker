@@ -44,8 +44,7 @@ interface RequirementFormModalProps {
 
 const todayYmd = () => new Date().toISOString().slice(0, 10);
 
-const inputCls =
-  'w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:bg-white focus:ring-2 focus:ring-[#0086FF] outline-none text-xs';
+const inputCls = 'field';
 
 export default function RequirementFormModal({
   isOpen,
@@ -205,10 +204,10 @@ export default function RequirementFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-3xl w-full border border-slate-200 shadow-2xl overflow-hidden my-8 max-h-[92vh] flex flex-col">
-        <div className="bg-gradient-to-r from-[#044492] to-[#0086FF] p-5 text-white flex items-center justify-between shrink-0">
+      <div className="bg-white rounded-xl max-w-3xl w-full border border-slate-200 shadow-2xl overflow-hidden my-8 max-h-[92vh] flex flex-col">
+        <div className="bg-jiffy-navy p-5 text-white flex items-center justify-between shrink-0">
           <div>
-            <h3 className="text-lg font-black tracking-tight">
+            <h3 className="text-lg font-bold tracking-normal">
               {initialData ? 'แก้ไข Requirement' : 'บันทึก Requirement ใหม่'}
             </h3>
             <p className="text-xs text-blue-100 mt-0.5">Jiffy Requirement Tracker (New POS Jiffy)</p>
@@ -223,24 +222,24 @@ export default function RequirementFormModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 text-sm">
           {/* Req ID & Title */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Req ID</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Req ID</label>
               <div className="relative">
                 <input
                   type="text"
                   value={reqIdLabel}
                   readOnly
-                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl font-mono font-bold text-[#044492] cursor-not-allowed text-[11px]"
+                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl font-mono font-bold text-jiffy-navy cursor-not-allowed text-xs"
                 />
                 <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5" />
               </div>
             </div>
 
             <div className="md:col-span-3">
-              <label className="block font-bold text-slate-700 mb-1">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 หัวข้อ Requirement <span className="text-red-500">*</span>
               </label>
               <input
@@ -258,7 +257,7 @@ export default function RequirementFormModal({
           {/* Core Function & Module */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Core Function (ระบบหลัก)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Core Function (ระบบหลัก)</label>
               <select
                 value={coreFunction}
                 onChange={(e) => {
@@ -278,11 +277,11 @@ export default function RequirementFormModal({
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="font-bold text-slate-700">โมดูลย่อย (Module)</label>
+                <label className="text-sm font-semibold text-slate-700">โมดูลย่อย (Module)</label>
                 <button
                   type="button"
                   onClick={() => setShowAddModule((prev) => !prev)}
-                  className="text-[11px] font-semibold text-[#0086FF] hover:underline flex items-center gap-0.5"
+                  className="text-xs font-semibold text-jiffy-blue hover:underline flex items-center gap-0.5"
                 >
                   <PlusCircle className="w-3 h-3" />
                   {showAddModule ? 'ยกเลิก' : 'เพิ่มโมดูล'}
@@ -302,12 +301,12 @@ export default function RequirementFormModal({
                       }
                     }}
                     placeholder="ชื่อโมดูลใหม่..."
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-blue-300 rounded-xl text-xs outline-none"
+                    className="flex-1 field flex-1"
                   />
                   <button
                     type="button"
                     onClick={handleAddModule}
-                    className="px-3 py-2 bg-[#044492] text-white font-bold rounded-xl text-xs"
+                    className="btn-brand shrink-0"
                   >
                     เพิ่ม
                   </button>
@@ -331,7 +330,7 @@ export default function RequirementFormModal({
           {/* Priority, Type, Status */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Priority (ความเร่งด่วน)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Priority (ความเร่งด่วน)</label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as PriorityType)}
@@ -344,7 +343,7 @@ export default function RequirementFormModal({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">ประเภท (Requirement Type)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">ประเภท (Requirement Type)</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as RequirementType)}
@@ -359,7 +358,7 @@ export default function RequirementFormModal({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">สถานะ (Status)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">สถานะ (Status)</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as RequirementStatusType)}
@@ -376,7 +375,7 @@ export default function RequirementFormModal({
 
           {/* Details */}
           <div>
-            <label className="block font-bold text-slate-700 mb-1">
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
               รายละเอียดความต้องการ / User Story / Acceptance Criteria
             </label>
             <textarea
@@ -389,16 +388,16 @@ export default function RequirementFormModal({
           </div>
 
           {/* Dev & Version */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-blue-50/50 rounded-2xl border border-blue-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
             <div>
-              <label className="block font-bold text-[#044492] mb-1 flex items-center gap-1">
+              <label className="block font-bold text-jiffy-navy mb-1 flex items-center gap-1">
                 <Code2 className="w-3.5 h-3.5" />
                 Dev ผู้รับผิดชอบ (Dev Assigned)
               </label>
               <select
                 value={devAssigned}
                 onChange={(e) => setDevAssigned(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-[#0086FF] outline-none text-xs"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-jiffy-blue outline-none text-xs"
               >
                 <option value="">-- ยังไม่มอบหมาย Dev --</option>
                 {team.map((tm) => (
@@ -410,13 +409,13 @@ export default function RequirementFormModal({
             </div>
 
             <div>
-              <label className="block font-bold text-[#044492] mb-1">Target Version / Sprint</label>
+              <label className="block font-bold text-jiffy-navy mb-1">Target Version / Sprint</label>
               <input
                 type="text"
                 value={targetVersion}
                 onChange={(e) => setTargetVersion(e.target.value)}
                 placeholder="เช่น v1.2.0, Sprint 4"
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-800 focus:ring-2 focus:ring-[#0086FF] outline-none text-xs"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-800 focus:ring-2 focus:ring-jiffy-blue outline-none text-xs"
               />
             </div>
           </div>
@@ -425,11 +424,11 @@ export default function RequirementFormModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="font-bold text-slate-700">ผู้ขอ (Requested By)</label>
+                <label className="text-sm font-semibold text-slate-700">ผู้ขอ (Requested By)</label>
                 <button
                   type="button"
                   onClick={() => setShowAddMember((prev) => !prev)}
-                  className="text-[11px] font-semibold text-[#0086FF] hover:underline flex items-center gap-0.5"
+                  className="text-xs font-semibold text-jiffy-blue hover:underline flex items-center gap-0.5"
                 >
                   <PlusCircle className="w-3 h-3" />
                   {showAddMember ? 'ยกเลิก' : 'เพิ่มสมาชิกทีม'}
@@ -449,12 +448,12 @@ export default function RequirementFormModal({
                       }
                     }}
                     placeholder="ชื่อสมาชิกใหม่..."
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-blue-300 rounded-xl text-xs outline-none"
+                    className="flex-1 field flex-1"
                   />
                   <button
                     type="button"
                     onClick={handleAddMember}
-                    className="px-3 py-2 bg-[#044492] text-white font-bold rounded-xl text-xs"
+                    className="btn-brand shrink-0"
                   >
                     เพิ่ม
                   </button>
@@ -478,7 +477,7 @@ export default function RequirementFormModal({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">วันที่ขอ (Request Date)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">วันที่ขอ (Request Date)</label>
               <input
                 type="date"
                 value={requestDate}
@@ -490,7 +489,7 @@ export default function RequirementFormModal({
 
           {/* Remark */}
           <div>
-            <label className="block font-bold text-slate-700 mb-1">
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
               หมายเหตุเพิ่มเติม / Dev Notes (Remark)
             </label>
             <input
@@ -504,7 +503,7 @@ export default function RequirementFormModal({
 
           {/* Images */}
           <div>
-            <label className="block font-bold text-slate-700 mb-1.5">
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5.5">
               รูปภาพ Wireframe / Mockup / เอกสารประกอบ (กด Ctrl+V เพื่อแปะได้ทันที)
             </label>
             <ImageUploader
@@ -519,14 +518,14 @@ export default function RequirementFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold transition-colors"
+              className="btn-secondary"
             >
               ยกเลิก
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FFCB06] hover:bg-[#E5B600] text-slate-950 font-black transition-all shadow-md disabled:opacity-50"
+              className="btn-primary"
             >
               <Save className="w-4 h-4" />
               <span>{isSubmitting ? 'กำลังบันทึก...' : 'บันทึก Requirement'}</span>

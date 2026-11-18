@@ -296,17 +296,17 @@ export default function DashboardView({
         <button
           type="button"
           onClick={onGoToTable}
-          className="group relative overflow-hidden bg-white p-4 rounded-2xl border border-[#DCEBFF] hover:border-[#0086FF] hover:shadow-md transition-all text-left flex flex-col justify-between"
+          className="group relative overflow-hidden bg-white p-4 rounded-xl border border-line hover:border-[#0086FF] hover:shadow-raised transition-all text-left flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-600">Requirement ทั้งหมด</span>
-            <div className="w-8 h-8 rounded-xl bg-[#044492]/10 text-[#044492] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-jiffy-navy/10 text-jiffy-navy flex items-center justify-center">
               <Layers className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-[#044492]">{animTotal}</div>
-            <div className="text-[11px] font-medium text-slate-500 mt-0.5">
+            <div className="text-2xl font-bold text-jiffy-navy">{animTotal}</div>
+            <div className="text-xs font-medium text-slate-500 mt-0.5">
               ความคืบหน้ารวม <span className="font-bold text-emerald-600">{animRate}%</span>
             </div>
           </div>
@@ -316,7 +316,7 @@ export default function DashboardView({
         <button
           type="button"
           onClick={() => onFilterByStatus('Draft')}
-          className="group relative overflow-hidden bg-white p-4 rounded-2xl border border-slate-200 hover:border-slate-400 hover:shadow-md transition-all text-left flex flex-col justify-between"
+          className="group relative overflow-hidden bg-white p-4 rounded-xl border border-slate-200 hover:border-slate-400 hover:shadow-raised transition-all text-left flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-700">Draft (ร่าง)</span>
@@ -325,8 +325,8 @@ export default function DashboardView({
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-800">{animDraft}</div>
-            <div className="text-[11px] font-medium text-slate-500 mt-0.5">
+            <div className="text-2xl font-bold text-slate-800">{animDraft}</div>
+            <div className="text-xs font-medium text-slate-500 mt-0.5">
               ร่างข้อกำหนดระบบ
             </div>
           </div>
@@ -336,7 +336,7 @@ export default function DashboardView({
         <button
           type="button"
           onClick={() => onFilterByStatus('In Review')}
-          className="group relative overflow-hidden bg-white p-4 rounded-2xl border border-amber-200 hover:border-amber-400 hover:shadow-md transition-all text-left flex flex-col justify-between"
+          className="group relative overflow-hidden bg-white p-4 rounded-xl border border-amber-200 hover:border-amber-400 hover:shadow-raised transition-all text-left flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-amber-900">In Review (รอตรวจ)</span>
@@ -345,8 +345,8 @@ export default function DashboardView({
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-amber-800">{animInReview}</div>
-            <div className="text-[11px] font-medium text-amber-700 mt-0.5">
+            <div className="text-2xl font-bold text-amber-800">{animInReview}</div>
+            <div className="text-xs font-medium text-amber-700 mt-0.5">
               รอตรวจทาน / ประเมิน
             </div>
           </div>
@@ -356,7 +356,7 @@ export default function DashboardView({
         <button
           type="button"
           onClick={() => onFilterByStatus('In Development')}
-          className="group relative overflow-hidden bg-white p-4 rounded-2xl border border-indigo-200 hover:border-indigo-400 hover:shadow-md transition-all text-left flex flex-col justify-between"
+          className="group relative overflow-hidden bg-white p-4 rounded-xl border border-indigo-200 hover:border-indigo-400 hover:shadow-raised transition-all text-left flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-indigo-900">In Dev (กำลังทำ)</span>
@@ -365,8 +365,8 @@ export default function DashboardView({
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-indigo-700">{animInDev}</div>
-            <div className="text-[11px] font-medium text-indigo-600 mt-0.5">
+            <div className="text-2xl font-bold text-indigo-700">{animInDev}</div>
+            <div className="text-xs font-medium text-indigo-600 mt-0.5">
               Dev กำลังพัฒนา
             </div>
           </div>
@@ -376,7 +376,7 @@ export default function DashboardView({
         <button
           type="button"
           onClick={() => onFilterByStatus('Testing')}
-          className="group relative overflow-hidden bg-white p-4 rounded-2xl border border-sky-200 hover:border-sky-400 hover:shadow-md transition-all text-left flex flex-col justify-between"
+          className="group relative overflow-hidden bg-white p-4 rounded-xl border border-sky-200 hover:border-sky-400 hover:shadow-raised transition-all text-left flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-sky-900">Testing (รอทดสอบ)</span>
@@ -385,8 +385,8 @@ export default function DashboardView({
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-sky-700">{animTesting}</div>
-            <div className="text-[11px] font-medium text-sky-600 mt-0.5">
+            <div className="text-2xl font-bold text-sky-700">{animTesting}</div>
+            <div className="text-xs font-medium text-sky-600 mt-0.5">
               กำลังทดสอบ / UAT
             </div>
           </div>
@@ -396,7 +396,7 @@ export default function DashboardView({
         <button
           type="button"
           onClick={() => onFilterByStatus('Done')}
-          className="group relative overflow-hidden bg-white p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md transition-all text-left flex flex-col justify-between"
+          className="group relative overflow-hidden bg-white p-4 rounded-xl border border-emerald-200 hover:border-emerald-400 hover:shadow-raised transition-all text-left flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-emerald-900">Done (เสร็จสมบูรณ์)</span>
@@ -405,21 +405,91 @@ export default function DashboardView({
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-emerald-700">{animDone}</div>
-            <div className="text-[11px] font-medium text-emerald-600 mt-0.5">
+            <div className="text-2xl font-bold text-emerald-700">{animDone}</div>
+            <div className="text-xs font-medium text-emerald-600 mt-0.5">
               เสร็จสมบูรณ์ / Released
             </div>
           </div>
         </button>
       </div>
 
+      {/* High Priority items still open: shown first because they decide SIT readiness */}
+      {highPriorityPending.length > 0 && (
+        <div className="bg-white rounded-xl border border-red-200 shadow-card overflow-hidden">
+          <div className="p-4 bg-red-50/60 border-b border-red-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Flame className="w-5 h-5 text-red-600 shrink-0" />
+              <div>
+                <h3 className="text-base font-bold text-red-950">
+                  High Priority Requirements ที่ยังคงค้าง ({highPriorityPending.length} เรื่อง)
+                </h3>
+                <p className="text-xs text-red-700/80">
+                  รายการเร่งด่วนที่ต้องเร่งพัฒนาให้เสร็จทันกำหนด SIT
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onFilterByPriority('1.High')}
+              className="text-xs font-semibold text-red-700 hover:text-red-900 flex items-center gap-1"
+            >
+              <span>ดูทั้งหมด</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="divide-y divide-red-50">
+            {highPriorityPending.map((req) => (
+              <div
+                key={req.id}
+                onClick={() => onSelectRequirement(req)}
+                className="p-3.5 hover:bg-red-50/40 cursor-pointer transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5"
+              >
+                <div className="flex items-start gap-3 min-w-0">
+                  <span className="shrink-0 text-xs font-bold text-red-700 bg-red-100 px-2.5 py-1 rounded-md border border-red-200">
+                    {req.req_id}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 hover:text-jiffy-blue truncate">
+                      {req.title || req.details}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500">
+                      <span className="font-medium text-slate-700">{req.core_function}</span>
+                      <span>•</span>
+                      <span>{req.module}</span>
+                      {req.target_version && (
+                        <>
+                          <span>•</span>
+                          <span className="text-blue-600 font-medium">{req.target_version}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                  {req.dev_assigned && (
+                    <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                      Dev: {req.dev_assigned}
+                    </span>
+                  )}
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
+                    {getStatusShortTh(req.status)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* 3. Core Function & Module Breakdown */}
-      <div className="bg-white rounded-2xl border border-[#DCEBFF] shadow-xs p-5">
+      <div className="bg-white rounded-xl border border-line shadow-card p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
           <div>
             <div className="flex items-center gap-2">
-              <Compass className="w-5 h-5 text-[#0086FF]" />
-              <h3 className="text-base font-bold text-[#044492]">
+              <Compass className="w-5 h-5 text-jiffy-blue" />
+              <h3 className="text-base font-bold text-jiffy-navy">
                 ความคืบหน้าแยกตาม Core Function และ Module
               </h3>
             </div>
@@ -439,7 +509,7 @@ export default function DashboardView({
                   onClick={() => setManualCore(item.core)}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition-all border ${
                     isSelected
-                      ? 'bg-[#044492] text-white border-[#044492] shadow-xs'
+                      ? 'bg-jiffy-navy text-white border-jiffy-navy shadow-card'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
@@ -469,7 +539,7 @@ export default function DashboardView({
 
               {/* Progress bar */}
               <div className="mt-4">
-                <div className="flex justify-between text-[11px] font-semibold text-slate-600 mb-1">
+                <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
                   <span>ความคืบหน้า</span>
                   <span>{activeCoreData.done} / {activeCoreData.total} เรื่อง</span>
                 </div>
@@ -484,15 +554,15 @@ export default function DashboardView({
               {/* Mini stats */}
               <div className="grid grid-cols-3 gap-2 mt-4 text-center">
                 <div className="bg-white rounded-lg p-2 border border-slate-200">
-                  <div className="text-[10px] text-slate-500">คงค้าง</div>
+                  <div className="text-xs text-slate-500">คงค้าง</div>
                   <div className="text-base font-bold text-slate-800">{activeCoreData.pending}</div>
                 </div>
                 <div className="bg-white rounded-lg p-2 border border-indigo-200">
-                  <div className="text-[10px] text-indigo-600 font-medium">In Dev</div>
+                  <div className="text-xs text-indigo-600 font-medium">In Dev</div>
                   <div className="text-base font-bold text-indigo-700">{activeCoreData.inDev}</div>
                 </div>
                 <div className="bg-white rounded-lg p-2 border border-rose-200">
-                  <div className="text-[10px] text-rose-600 font-medium">High ค้าง</div>
+                  <div className="text-xs text-rose-600 font-medium">High ค้าง</div>
                   <div className="text-base font-bold text-rose-700">{activeCoreData.highPending}</div>
                 </div>
               </div>
@@ -504,7 +574,7 @@ export default function DashboardView({
                 if (onSelectCoreFunction) onSelectCoreFunction(activeCoreData.core);
                 onGoToTable();
               }}
-              className="mt-4 w-full py-2 px-3 rounded-lg bg-white border border-[#0086FF]/40 text-[#044492] hover:bg-[#0086FF] hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-2xs"
+              className="mt-4 w-full py-2 px-3 rounded-lg bg-white border border-[#0086FF]/40 text-jiffy-navy hover:bg-jiffy-blue hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-card"
             >
               <span>ดูตาราง {activeCoreData.meta.shortName} ทั้งหมด</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -515,7 +585,7 @@ export default function DashboardView({
           <div className="lg:col-span-2">
             <div className="text-xs font-bold text-slate-700 mb-2.5 flex items-center justify-between">
               <span>โมดูลย่อยใน {activeCoreData.core}</span>
-              <span className="text-[11px] font-normal text-slate-500">
+              <span className="text-xs font-normal text-slate-500">
                 (คลิกโมดูลเพื่อกรองในตาราง)
               </span>
             </div>
@@ -532,16 +602,16 @@ export default function DashboardView({
                   className="p-3 rounded-xl border border-slate-200 hover:border-[#0086FF] hover:bg-blue-50/30 transition-all text-left flex flex-col justify-between bg-white group"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800 group-hover:text-[#044492] truncate">
+                    <span className="text-xs font-bold text-slate-800 group-hover:text-jiffy-navy truncate">
                       {mod.name}
                     </span>
-                    <span className="text-[11px] font-bold text-[#044492] px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">
+                    <span className="text-xs font-bold text-jiffy-navy px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">
                       {mod.total}
                     </span>
                   </div>
 
                   <div className="mt-2.5">
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
+                    <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
                       <span>เสร็จ {mod.done}/{mod.total}</span>
                       <span className="font-semibold text-emerald-600">{mod.percentDone}%</span>
                     </div>
@@ -562,11 +632,11 @@ export default function DashboardView({
       {/* 4. Dev Workload & Requirement Types (2 Columns) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Dev Workload */}
-        <div className="bg-white rounded-2xl border border-[#DCEBFF] shadow-xs p-5">
+        <div className="bg-white rounded-xl border border-line shadow-card p-5">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-[#0086FF]" />
-              <h3 className="text-base font-bold text-[#044492]">ภาระงาน Developer (Dev Workload)</h3>
+              <User className="w-5 h-5 text-jiffy-blue" />
+              <h3 className="text-base font-bold text-jiffy-navy">ภาระงาน Developer (Dev Workload)</h3>
             </div>
             <span className="text-xs font-medium text-slate-500">
               {devWorkload.filter((d) => d.total > 0).length} ท่านมีงานรับผิดชอบ
@@ -581,18 +651,18 @@ export default function DashboardView({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-100 text-[#044492] font-bold text-xs flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-full bg-blue-100 text-jiffy-navy font-bold text-xs flex items-center justify-center">
                       {dev.name.charAt(0)}
                     </div>
                     <div>
                       <span className="text-xs font-bold text-slate-900">{dev.name}</span>
-                      <span className="text-[10px] text-slate-500 ml-1.5">
+                      <span className="text-xs text-slate-500 ml-1.5">
                         (รับผิดชอบ {dev.total} เรื่อง)
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-[11px]">
+                  <div className="flex items-center gap-1.5 text-xs">
                     <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
                       In Dev: {dev.inDev}
                     </span>
@@ -618,12 +688,12 @@ export default function DashboardView({
         </div>
 
         {/* Requirement Types Distribution & Priority Summary */}
-        <div className="bg-white rounded-2xl border border-[#DCEBFF] shadow-xs p-5 flex flex-col justify-between">
+        <div className="bg-white rounded-xl border border-line shadow-card p-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-[#0086FF]" />
-                <h3 className="text-base font-bold text-[#044492]">ประเภท Requirement & ความเร่งด่วน</h3>
+                <BarChart3 className="w-5 h-5 text-jiffy-blue" />
+                <h3 className="text-base font-bold text-jiffy-navy">ประเภท Requirement & ความเร่งด่วน</h3>
               </div>
               <span className="text-xs font-medium text-slate-500">
                 จำแนกตาม Type
@@ -643,7 +713,7 @@ export default function DashboardView({
                   <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                     <div
                       style={{ width: `${item.percent}%` }}
-                      className="h-full bg-[#0086FF] rounded-full transition-all"
+                      className="h-full bg-jiffy-blue rounded-full transition-all"
                     />
                   </div>
                 </div>
@@ -661,11 +731,11 @@ export default function DashboardView({
                   onClick={() => onFilterByPriority('1.High')}
                   className="p-2.5 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-50 text-left transition-all"
                 >
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-red-700">
+                  <div className="flex items-center gap-1 text-xs font-bold text-red-700">
                     <Flame className="w-3.5 h-3.5" />
                     1.High
                   </div>
-                  <div className="text-lg font-black text-red-900 mt-1">{stats.high}</div>
+                  <div className="text-lg font-bold text-red-900 mt-1">{stats.high}</div>
                 </button>
 
                 <button
@@ -673,11 +743,11 @@ export default function DashboardView({
                   onClick={() => onFilterByPriority('2.Medium')}
                   className="p-2.5 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-50 text-left transition-all"
                 >
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-amber-800">
+                  <div className="flex items-center gap-1 text-xs font-bold text-amber-800">
                     <AlertTriangle className="w-3.5 h-3.5" />
                     2.Medium
                   </div>
-                  <div className="text-lg font-black text-amber-900 mt-1">{stats.medium}</div>
+                  <div className="text-lg font-bold text-amber-900 mt-1">{stats.medium}</div>
                 </button>
 
                 <button
@@ -685,11 +755,11 @@ export default function DashboardView({
                   onClick={() => onFilterByPriority('3.Low')}
                   className="p-2.5 rounded-xl border border-sky-200 bg-sky-50/50 hover:bg-sky-50 text-left transition-all"
                 >
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-sky-700">
+                  <div className="flex items-center gap-1 text-xs font-bold text-sky-700">
                     <Layers className="w-3.5 h-3.5" />
                     3.Low
                   </div>
-                  <div className="text-lg font-black text-sky-900 mt-1">{stats.low}</div>
+                  <div className="text-lg font-bold text-sky-900 mt-1">{stats.low}</div>
                 </button>
               </div>
             </div>
@@ -698,7 +768,7 @@ export default function DashboardView({
           <button
             type="button"
             onClick={onGoToPriorityList}
-            className="mt-5 w-full py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-[#0086FF] hover:text-white text-[#044492] border border-slate-200 hover:border-[#0086FF] text-xs font-bold flex items-center justify-center gap-2 transition-all"
+            className="mt-5 w-full py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-jiffy-blue hover:text-white text-jiffy-navy border border-slate-200 hover:border-[#0086FF] text-xs font-bold flex items-center justify-center gap-2 transition-all"
           >
             <span>ดูรายการแยกตาม Priority List ทั้งหมด</span>
             <ArrowRight className="w-4 h-4" />
@@ -706,76 +776,6 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* 5. High Priority Requirements Pending (Urgent Action List) */}
-      {highPriorityPending.length > 0 && (
-        <div className="bg-white rounded-2xl border border-red-200 shadow-xs overflow-hidden">
-          <div className="p-4 bg-gradient-to-r from-red-50 to-orange-50/40 border-b border-red-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Flame className="w-5 h-5 text-red-600 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-red-950">
-                  High Priority Requirements ที่ยังคงค้าง ({highPriorityPending.length} เรื่อง)
-                </h3>
-                <p className="text-[11px] text-red-700/80">
-                  รายการเร่งด่วนที่ต้องเร่งพัฒนาให้เสร็จทันกำหนด SIT
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onFilterByPriority('1.High')}
-              className="text-xs font-semibold text-red-700 hover:text-red-900 flex items-center gap-1"
-            >
-              <span>ดูทั้งหมด</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="divide-y divide-red-50">
-            {highPriorityPending.map((req) => (
-              <div
-                key={req.id}
-                onClick={() => onSelectRequirement(req)}
-                className="p-3.5 hover:bg-red-50/40 cursor-pointer transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5"
-              >
-                <div className="flex items-start gap-3 min-w-0">
-                  <span className="shrink-0 text-xs font-bold text-red-700 bg-red-100 px-2.5 py-1 rounded-md border border-red-200">
-                    {req.req_id}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 hover:text-[#0086FF] truncate">
-                      {req.title || req.details}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-slate-500">
-                      <span className="font-medium text-slate-700">{req.core_function}</span>
-                      <span>•</span>
-                      <span>{req.module}</span>
-                      {req.target_version && (
-                        <>
-                          <span>•</span>
-                          <span className="text-blue-600 font-medium">{req.target_version}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                  {req.dev_assigned && (
-                    <span className="text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                      Dev: {req.dev_assigned}
-                    </span>
-                  )}
-                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
-                    {getStatusShortTh(req.status)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

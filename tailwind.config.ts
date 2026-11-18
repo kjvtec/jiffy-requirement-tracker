@@ -32,11 +32,28 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        // Jiffy corporate identity
+        jiffy: {
+          ink: "#06142E", // deepest navy: headings, nav bar
+          navy: "#044492", // primary brand
+          blue: "#0086FF", // interactive / links / focus
+          sky: "#EFF7FF", // tinted surfaces
+          mist: "#DCEBFF", // tinted borders
+          yellow: "#FFCB06", // the single call-to-action colour
+          gold: "#E5B600", // yellow hover
+        },
+        canvas: "#F3F6FB", // page background
+        line: "#DCE5F2", // default border
       },
       fontFamily: {
         sans: sansStack,
         serif: sansStack,
         mono: monoStack,
+      },
+      boxShadow: {
+        card: "0 1px 2px rgba(6, 20, 46, 0.06), 0 1px 3px rgba(6, 20, 46, 0.04)",
+        raised: "0 4px 12px -2px rgba(6, 20, 46, 0.12), 0 2px 4px rgba(6, 20, 46, 0.06)",
+        pop: "0 20px 48px -12px rgba(6, 20, 46, 0.32)",
       },
     },
   },

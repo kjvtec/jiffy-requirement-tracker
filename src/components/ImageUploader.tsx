@@ -239,7 +239,7 @@ export default function ImageUploader({
                   e.stopPropagation();
                   handleRemoveImage(idx);
                 }}
-                className="absolute -top-1.5 -right-1.5 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-md transition-transform hover:scale-110"
+                className="absolute -top-1.5 -right-1.5 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-raised transition-transform hover:scale-110"
                 title="ลบรูปนี้"
               >
                 <X className="w-3.5 h-3.5" />

@@ -113,7 +113,7 @@ export default function SubModuleModals({
           onClick={onCloseRename}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 border border-slate-200 space-y-4"
+            className="bg-white rounded-xl shadow-2xl max-w-md w-full p-5 border border-slate-200 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -122,8 +122,8 @@ export default function SubModuleModals({
                   <Edit className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">แก้ไขชื่อกลุ่มย่อย (Rename Module)</h3>
-                  <p className="text-[11px] text-slate-500">ในกลุ่ม {renameTarget.core}</p>
+                  <h3 className="text-sm font-bold text-slate-900">แก้ไขชื่อกลุ่มย่อย (Rename Module)</h3>
+                  <p className="text-xs text-slate-500">ในกลุ่ม {renameTarget.core}</p>
                 </div>
               </div>
               <button
@@ -151,7 +151,7 @@ export default function SubModuleModals({
                 className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                 placeholder="ระบุชื่อกลุ่มย่อยใหม่..."
               />
-              <p className="text-[11px] text-slate-500">
+              <p className="text-xs text-slate-500">
                 • เมื่อเปลี่ยนชื่อ ระบบจะอัปเดตชื่อกลุ่มย่อยใน Master Data และเปลี่ยนชื่อกลุ่มย่อยใน Issue ทั้งหมดที่เกี่ยวข้องให้อัตโนมัติ
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function SubModuleModals({
                 type="button"
                 disabled={!renameValue.trim() || renameValue.trim() === renameTarget.oldName || savingRename}
                 onClick={onSaveRename}
-                className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-xs"
+                className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-card"
               >
                 {savingRename ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
               </button>
@@ -184,7 +184,7 @@ export default function SubModuleModals({
           onClick={onCloseDeleteBlockedNotice}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 border border-amber-200 space-y-4"
+            className="bg-white rounded-xl shadow-2xl max-w-md w-full p-5 border border-amber-200 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -192,11 +192,11 @@ export default function SubModuleModals({
                 <ShieldAlert className="w-6 h-6 text-amber-600" />
               </div>
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900">
+                <h3 className="text-sm font-bold text-slate-900">
                   ไม่สามารถลบกลุ่มย่อยนี้ได้ (ห้ามลบ)
                 </h3>
                 <p className="text-xs text-slate-600 mt-1">
-                  กลุ่มย่อย <span className="font-bold text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">"{deleteBlockedNotice.moduleName}"</span> มีปัญหา (Issue) ใช้งานอยู่จำนวน <span className="font-extrabold text-red-600">{deleteBlockedNotice.count} รายการ</span>
+                  กลุ่มย่อย <span className="font-bold text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">"{deleteBlockedNotice.moduleName}"</span> มีปัญหา (Issue) ใช้งานอยู่จำนวน <span className="font-bold text-red-600">{deleteBlockedNotice.count} รายการ</span>
                 </p>
               </div>
             </div>
@@ -206,10 +206,10 @@ export default function SubModuleModals({
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                 นโยบายความปลอดภัยของระบบ:
               </div>
-              <p className="text-[11px] leading-relaxed">
+              <p className="text-xs leading-relaxed">
                 ระบบไม่อนุญาตให้ลบกลุ่มย่อยที่มีข้อมูล Issue ผูกอยู่ เพื่อป้องกันไม่ให้ข้อมูลในระบบเกิดความเสียหายหรือสูญหาย
               </p>
-              <div className="pt-1 text-[11px] text-slate-600 border-t border-amber-200/60">
+              <div className="pt-1 text-xs text-slate-600 border-t border-amber-200/60">
                 💡 <b>คำแนะนำ:</b> หากต้องการลบกลุ่มย่อยนี้จริง กรุณาเข้าไปเปิดแก้ไข Issue ทั้ง {deleteBlockedNotice.count} รายการดังกล่าว แล้วเปลี่ยนกลุ่มย่อยไปยังกลุ่มอื่นก่อน จากนั้นจึงจะสามารถลบกลุ่มย่อยนี้ได้ครับ
               </div>
             </div>
@@ -234,7 +234,7 @@ export default function SubModuleModals({
           onClick={onCloseConfirmDelete}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 border border-slate-200 space-y-4"
+            className="bg-white rounded-xl shadow-2xl max-w-md w-full p-5 border border-slate-200 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -242,14 +242,14 @@ export default function SubModuleModals({
                 <Trash2 className="w-5 h-5 text-rose-600" />
               </div>
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900">ยืนยันการลบกลุ่มย่อย</h3>
+                <h3 className="text-sm font-bold text-slate-900">ยืนยันการลบกลุ่มย่อย</h3>
                 <p className="text-xs text-slate-600 mt-1">
                   คุณต้องการลบกลุ่มย่อย <span className="font-bold text-slate-900">"{confirmDeleteTarget.moduleName}"</span> ออกจากกลุ่ม <span className="font-bold text-slate-900">"{confirmDeleteTarget.core}"</span> ใช่หรือไม่?
                 </p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
               <Check className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>กลุ่มย่อยนี้ไม่มี Issue ใดใช้งานอยู่ สามารถลบได้อย่างปลอดภัย</span>
             </div>
@@ -266,7 +266,7 @@ export default function SubModuleModals({
                 type="button"
                 disabled={deletingModule}
                 onClick={onConfirmDelete}
-                className="px-4 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 rounded-xl shadow-xs"
+                className="px-4 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 rounded-xl shadow-card"
               >
                 {deletingModule ? 'กำลังลบ...' : 'ยืนยันลบกลุ่มย่อย'}
               </button>
@@ -282,7 +282,7 @@ export default function SubModuleModals({
           onClick={onCloseManagingModules}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-slate-200 overflow-hidden"
+            className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-slate-200 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -292,13 +292,13 @@ export default function SubModuleModals({
                   <Settings className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-extrabold flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold flex items-center gap-2">
                     จัดการกลุ่มย่อยใน {activeCoreSummary.core}
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">
                       {activeCoreSummary.subModules.length} กลุ่มย่อย
                     </span>
                   </h3>
-                  <p className="text-[11px] text-slate-300">
+                  <p className="text-xs text-slate-300">
                     แก้ไขชื่อ หรือลบกลุ่มย่อยที่ไม่ได้ใช้งาน (หากมี Issue ใช้งานอยู่จะไม่อนุญาตให้ลบ)
                   </p>
                 </div>
@@ -349,7 +349,7 @@ export default function SubModuleModals({
                         <span className="text-xs sm:text-sm font-bold text-slate-900 block truncate">
                           {mod.name}
                         </span>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                           <span>{mod.total} Issue</span>
                           <span>•</span>
                           <span className="text-emerald-600 font-semibold">{mod.closed} ปิด</span>
@@ -361,12 +361,12 @@ export default function SubModuleModals({
 
                     <div className="flex items-center gap-2 shrink-0">
                       {mod.total > 0 ? (
-                        <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                        <span className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
                           <ShieldAlert className="w-3 h-3 text-amber-600 shrink-0" />
                           มี {mod.total} Issue (ห้ามลบ)
                         </span>
                       ) : (
-                        <span className="hidden sm:inline-block text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                        <span className="hidden sm:inline-block text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                           ไม่มี Issue (ลบได้)
                         </span>
                       )}

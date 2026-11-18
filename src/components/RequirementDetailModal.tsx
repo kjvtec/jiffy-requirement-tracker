@@ -150,18 +150,18 @@ export default function RequirementDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden my-8 max-h-[92vh] flex flex-col">
+      <div className="bg-white rounded-xl max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden my-8 max-h-[92vh] flex flex-col">
         {/* Modal Top Header */}
-        <div className="bg-gradient-to-r from-[#044492] to-[#0086FF] p-5 text-white flex items-center justify-between shrink-0">
+        <div className="bg-jiffy-navy p-5 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <span className="font-mono text-sm font-black px-3 py-1 bg-white text-[#044492] rounded-xl shadow-xs">
+            <span className="font-mono text-sm font-bold px-3 py-1 bg-white text-jiffy-navy rounded-xl shadow-card">
               {requirement.req_id}
             </span>
             <div>
               <span className="text-xs font-semibold text-blue-100">
                 {requirement.type}
               </span>
-              <h2 className="text-base sm:text-lg font-black leading-tight line-clamp-1">
+              <h2 className="text-base sm:text-lg font-bold leading-tight line-clamp-1">
                 {requirement.title}
               </h2>
             </div>
@@ -212,7 +212,7 @@ export default function RequirementDetailModal({
                   onClick={() => handleStatusClick(st)}
                   className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border ${
                     isActive
-                      ? `${getStatusBadgeClass(st)} ring-2 ring-blue-400/50 shadow-xs`
+                      ? `${getStatusBadgeClass(st)} ring-2 ring-blue-400/50 shadow-card`
                       : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200'
                   }`}
                 >
@@ -224,12 +224,12 @@ export default function RequirementDetailModal({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-5 overflow-y-auto flex-1 text-xs text-slate-700">
+        <div className="p-6 space-y-5 overflow-y-auto flex-1 text-sm text-slate-700">
           {/* Metadata Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
             {/* Core Function */}
             <div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase">Core Function</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">Core Function</div>
               <div className="mt-1">
                 <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border ${coreMeta.badgeBg} ${coreMeta.badgeText} ${coreMeta.badgeBorder}`}>
                   {requirement.core_function}
@@ -239,7 +239,7 @@ export default function RequirementDetailModal({
 
             {/* Module */}
             <div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase">Module</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">Module</div>
               <div className="text-xs font-bold text-slate-800 mt-1 flex items-center gap-1">
                 <Layers className="w-3.5 h-3.5 text-slate-500" />
                 {requirement.module}
@@ -248,7 +248,7 @@ export default function RequirementDetailModal({
 
             {/* Priority */}
             <div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase">Priority</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">Priority</div>
               <div className="mt-1">
                 <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border ${
                   requirement.priority.includes('High')
@@ -264,11 +264,11 @@ export default function RequirementDetailModal({
 
             {/* Requested By */}
             <div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase">ผู้ขอ / วันที่ขอ</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">ผู้ขอ / วันที่ขอ</div>
               <div className="text-xs font-bold text-slate-800 mt-1">
                 {requirement.requested_by || 'Unknown'}
               </div>
-              <div className="text-[10px] text-slate-500">
+              <div className="text-xs text-slate-500">
                 {requirement.request_date
                   ? new Date(requirement.request_date).toLocaleDateString('th-TH')
                   : '-'}
@@ -279,23 +279,23 @@ export default function RequirementDetailModal({
           {/* Details / User Story Section */}
           <div className="space-y-1.5">
             <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-[#0086FF]" />
+              <FileText className="w-4 h-4 text-jiffy-blue" />
               รายละเอียดความต้องการ / User Story / Acceptance Criteria
             </h4>
-            <div className="p-4 bg-white border border-slate-200 rounded-2xl whitespace-pre-wrap leading-relaxed text-slate-800 text-xs">
+            <div className="p-4 bg-white border border-slate-200 rounded-xl whitespace-pre-wrap leading-relaxed text-slate-800 text-xs">
               {requirement.details || 'ไม่มีรายละเอียดเพิ่มเติม'}
             </div>
           </div>
 
           {/* Dev Assignment & Version Control Panel */}
-          <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 space-y-3">
+          <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-100 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="font-bold text-[#044492] text-xs flex items-center gap-1.5">
-                <Code2 className="w-4 h-4 text-[#0086FF]" />
+              <h4 className="font-bold text-jiffy-navy text-xs flex items-center gap-1.5">
+                <Code2 className="w-4 h-4 text-jiffy-blue" />
                 ข้อมูลการพัฒนา (Development & Release Info)
               </h4>
               {saveSuccess && (
-                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                   {saveSuccess}
                 </span>
               )}
@@ -303,13 +303,13 @@ export default function RequirementDetailModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Dev ผู้รับผิดชอบ (Dev Assigned)
                 </label>
                 <select
                   value={devAssigned}
                   onChange={(e) => setDevAssigned(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 outline-none text-xs"
+                  className="field font-semibold"
                 >
                   <option value="">-- ยังไม่มอบหมาย Dev --</option>
                   {team.map((tm) => (
@@ -321,7 +321,7 @@ export default function RequirementDetailModal({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Target Version / Sprint
                 </label>
                 <input
@@ -329,13 +329,13 @@ export default function RequirementDetailModal({
                   value={targetVersion}
                   onChange={(e) => setTargetVersion(e.target.value)}
                   placeholder="เช่น v1.2.0, Sprint 4"
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-800 outline-none text-xs"
+                  className="field font-mono"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 หมายเหตุเพิ่มเติม / Dev Notes (Remark)
               </label>
               <div className="flex gap-2">
@@ -344,13 +344,13 @@ export default function RequirementDetailModal({
                   value={remark}
                   onChange={(e) => setRemark(e.target.value)}
                   placeholder="เช่น สรุปผลการทดสอบ, จุดที่ต้องระวัง, หรือสถานะการส่งมอบ..."
-                  className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 outline-none text-xs"
+                  className="field flex-1"
                 />
                 <button
                   type="button"
                   disabled={isSaving}
                   onClick={handleQuickSave}
-                  className="px-4 py-2 bg-[#044492] hover:bg-[#0086FF] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 shrink-0"
+                  className="btn-brand shrink-0"
                 >
                   <Save className="w-3.5 h-3.5" />
                   {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
@@ -394,7 +394,7 @@ export default function RequirementDetailModal({
           {/* Activity history & comments */}
           <div className="space-y-2.5">
             <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-              <History className="w-4 h-4 text-[#0086FF]" />
+              <History className="w-4 h-4 text-jiffy-blue" />
               ประวัติการดำเนินงาน &amp; ความเห็น ({activity.length})
             </h4>
             <div className="flex gap-2">
@@ -409,20 +409,20 @@ export default function RequirementDetailModal({
                   }
                 }}
                 placeholder="เพิ่มความเห็น / อัปเดตความคืบหน้า..."
-                className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 outline-none text-xs focus:ring-2 focus:ring-[#0086FF]"
+                className="field flex-1 focus:ring-2 focus:ring-jiffy-blue"
               />
               <button
                 type="button"
                 disabled={isCommenting || !comment.trim()}
                 onClick={handleComment}
-                className="px-4 py-2 bg-[#044492] hover:bg-[#0086FF] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 shrink-0"
+                className="btn-brand shrink-0"
               >
                 <Send className="w-3.5 h-3.5" />
                 ส่ง
               </button>
             </div>
             {activity.length === 0 ? (
-              <p className="text-[11px] text-slate-400 py-1">ยังไม่มีประวัติ</p>
+              <p className="text-xs text-slate-400 py-1">ยังไม่มีประวัติ</p>
             ) : (
               <ol className="space-y-2 border-l-2 border-slate-200 ml-1.5 pl-4">
                 {activity.map((a) => (
@@ -436,7 +436,7 @@ export default function RequirementDetailModal({
                           : 'bg-slate-400'
                       }`}
                     />
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-xs text-slate-500">
                       <b className="text-slate-700">{a.actor}</b> •{' '}
                       {new Date(a.created_at).toLocaleString('th-TH')}
                     </div>
@@ -453,7 +453,7 @@ export default function RequirementDetailModal({
 
         {/* Modal Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
-          <div className="text-[11px] text-slate-500">
+          <div className="text-xs text-slate-500">
             สร้างเมื่อ: {requirement.created_at ? new Date(requirement.created_at).toLocaleString('th-TH') : '-'}
           </div>
           <button

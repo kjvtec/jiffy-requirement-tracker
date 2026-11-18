@@ -9,7 +9,6 @@ import {
   FolderTree,
   Columns3,
   ListOrdered,
-  Globe,
   ExternalLink,
   UserCircle2,
 } from 'lucide-react';
@@ -46,45 +45,41 @@ export default function AppHeader({
   onRefresh,
   onExport,
 }: AppHeaderProps) {
-  const tabs: Array<{ id: ActiveTab; label: string; icon: React.ReactNode }> = [
-    { id: 'dashboard', label: 'Dashboard สรุปภาพรวม', icon: <LayoutDashboard className="w-4 h-4 shrink-0" /> },
-    { id: 'kanban', label: `Kanban Board (${total})`, icon: <Columns3 className="w-4 h-4 shrink-0" /> },
-    { id: 'explorer', label: `ตาราง Requirement (${total})`, icon: <FolderTree className="w-4 h-4 shrink-0" /> },
-    { id: 'priority', label: 'แยกตาม Priority', icon: <ListOrdered className="w-4 h-4 shrink-0" /> },
+  const tabs: Array<{ id: ActiveTab; label: string; icon: React.ReactNode; count?: number }> = [
+    { id: 'dashboard', label: 'ภาพรวม', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'kanban', label: 'Kanban', icon: <Columns3 className="w-4 h-4" />, count: total },
+    { id: 'explorer', label: 'ตาราง Requirement', icon: <FolderTree className="w-4 h-4" />, count: total },
+    { id: 'priority', label: 'แยกตาม Priority', icon: <ListOrdered className="w-4 h-4" /> },
   ];
 
   return (
-    <nav className="sticky top-0 z-30 shadow-md">
-      <div className="bg-white/95 backdrop-blur-md border-b border-[#D8E9FF]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-3">
+    <header className="sticky top-0 z-30">
+      {/* Brand bar */}
+      <div className="bg-white border-b border-line">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logos/jiffy-logo.png" alt="Jiffy Logo" className="h-9 w-9 sm:h-10 sm:w-10 object-contain shrink-0" />
-                <span className="h-6 w-px bg-slate-200 shrink-0" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logos/pttrm-logo.png" alt="PTT RM Logo" className="h-8 sm:h-9 w-auto object-contain shrink-0" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-sm sm:text-lg font-black text-[#044492] leading-none truncate">
-                  Jiffy Requirement Tracker (New POS Jiffy)
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logos/jiffy-logo.png" alt="Jiffy" className="h-9 w-9 object-contain shrink-0" />
+              <span className="hidden sm:block h-7 w-px bg-line shrink-0" aria-hidden />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logos/pttrm-logo.png" alt="PTT RM" className="hidden sm:block h-8 w-auto object-contain shrink-0" />
+              <div className="min-w-0 ml-1">
+                <h1 className="text-base sm:text-lg font-bold text-jiffy-navy leading-tight truncate">
+                  Jiffy Requirement Tracker
                 </h1>
-                <p className="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5 truncate">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0086FF] shrink-0" />
-                  VTec POS Retail • New POS Jiffy Requirement Management
-                </p>
+                <p className="text-xs text-slate-500 leading-tight truncate">New POS Jiffy · VTec POS Retail</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-              <label className="hidden md:flex items-center gap-1.5 text-xs font-bold text-[#044492] bg-[#EFF7FF] border border-[#B8DCFF] rounded-xl pl-2.5 pr-1 py-1">
-                <UserCircle2 className="w-4 h-4 text-[#0086FF]" />
-                <span className="text-slate-500 font-semibold">ฉันคือ</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="hidden md:flex items-center gap-2 h-9 pl-2.5 pr-1.5 rounded-lg border border-line bg-white text-sm hover:border-slate-300">
+                <UserCircle2 className="w-4 h-4 text-jiffy-blue" aria-hidden />
+                <span className="text-slate-500">ผู้ใช้งาน</span>
                 <select
                   value={currentUser}
                   onChange={(e) => onCurrentUserChange(e.target.value)}
-                  className="bg-transparent font-bold outline-none cursor-pointer max-w-[110px]"
+                  className="bg-transparent font-semibold text-jiffy-navy outline-none cursor-pointer max-w-[120px]"
                   aria-label="ผู้ใช้งานปัจจุบัน"
                 >
                   {team.map((t) => (
@@ -99,71 +94,81 @@ export default function AppHeader({
                 href={HQ_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[#EFF7FF] hover:bg-[#DCEEFF] text-[#044492] rounded-xl text-sm font-bold border border-[#B8DCFF] transition-all"
-                title="เข้าระบบ Back Office / Cloud HQ (Dev)"
+                className="btn-secondary hidden sm:inline-flex h-9"
+                title="เปิด Back Office / Cloud HQ (Dev)"
               >
-                <Globe className="w-4 h-4 text-[#0086FF] shrink-0" />
-                Cloud HQ (Dev)
-                <ExternalLink className="w-3.5 h-3.5 text-[#0086FF]/80 shrink-0" />
+                Cloud HQ
+                <ExternalLink className="w-3.5 h-3.5" aria-hidden />
               </a>
 
-              <button
-                type="button"
-                onClick={onCreate}
-                className="flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 bg-[#FFCB06] hover:bg-[#E5B600] text-slate-950 rounded-xl text-xs sm:text-sm font-black shadow-md border border-[#E5B300] transition-all hover:scale-[1.03] active:scale-95"
-              >
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
-                <span>เพิ่ม Requirement</span>
+              <button type="button" onClick={onCreate} className="btn-primary h-9">
+                <Plus className="w-4 h-4" strokeWidth={2.5} aria-hidden />
+                <span className="hidden sm:inline">เพิ่ม Requirement</span>
+                <span className="sm:hidden">เพิ่ม</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-gradient-to-r from-[#06142e] via-[#044492] to-[#0086FF] text-white border-b border-[#03326C]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2">
-          <div className="flex items-center space-x-1 sm:space-x-2 py-2 overflow-x-auto">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => onTabChange(t.id)}
-                className={`flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all font-bold ${
-                  activeTab === t.id
-                    ? 'bg-[#FFCB06] text-slate-950 shadow-sm'
-                    : 'text-blue-100 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                {t.icon}
-                {t.label}
-              </button>
-            ))}
-          </div>
+      {/* Navigation bar */}
+      <div className="bg-jiffy-navy">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 flex items-stretch justify-between gap-3">
+          <nav className="flex items-stretch overflow-x-auto -mb-px" aria-label="มุมมอง">
+            {tabs.map((t) => {
+              const active = activeTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => onTabChange(t.id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex items-center gap-2 px-4 h-11 text-sm font-semibold whitespace-nowrap border-b-[3px] transition-colors ${
+                    active
+                      ? 'text-white border-jiffy-yellow'
+                      : 'text-blue-100/80 border-transparent hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {t.icon}
+                  {t.label}
+                  {t.count !== undefined && (
+                    <span
+                      className={`min-w-[22px] px-1.5 rounded-full text-xs font-semibold text-center ${
+                        active ? 'bg-jiffy-yellow text-jiffy-ink' : 'bg-white/15 text-blue-100'
+                      }`}
+                    >
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={onRefresh}
               disabled={loading}
-              className="p-1.5 text-blue-100 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-blue-100 hover:text-white hover:bg-white/10 transition-colors"
               title="รีเฟรชข้อมูล"
               aria-label="รีเฟรชข้อมูล"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button
               type="button"
               onClick={onExport}
               disabled={total === 0 || exporting}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-white/95 hover:bg-white rounded-xl shadow-xs transition-all disabled:opacity-50"
-              title="ดาวน์โหลดสรุป Requirement เป็น Excel (.xlsx)"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-white/25 text-sm font-semibold text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+              title="ดาวน์โหลดเป็น Excel (.xlsx)"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" aria-hidden />
               <span className="hidden sm:inline">Export Excel</span>
             </button>
           </div>
         </div>
       </div>
-    </nav>
+    </header>
   );
 }

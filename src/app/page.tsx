@@ -21,9 +21,9 @@ import ToastHost from '@/components/ToastHost';
 import type { FormPresets } from '@/components/RequirementFormModal';
 
 const TabLoading = ({ label }: { label: string }) => (
-  <div className="bg-white rounded-2xl border border-[#DCEBFF] p-8 text-center shadow-xs">
-    <div className="inline-flex items-center gap-2 text-xs font-semibold text-[#044492]">
-      <RefreshCw className="w-4 h-4 animate-spin text-[#0086FF]" />
+  <div className="card p-8 text-center">
+    <div className="inline-flex items-center gap-2 text-sm font-semibold text-jiffy-navy">
+      <RefreshCw className="w-4 h-4 animate-spin text-jiffy-blue" />
       <span>{label}</span>
     </div>
   </div>
@@ -41,6 +41,13 @@ const PriorityListView = dynamic(() => import('@/components/PriorityListView'), 
 const RequirementFormModal = dynamic(() => import('@/components/RequirementFormModal'));
 const RequirementDetailModal = dynamic(() => import('@/components/RequirementDetailModal'));
 const DeleteConfirmModal = dynamic(() => import('@/components/DeleteConfirmModal'));
+
+const TAB_HEADINGS: Record<ActiveTab, { title: string; description: string }> = {
+  dashboard: { title: 'ภาพรวมโครงการ', description: 'ความคืบหน้าของ Requirement แยกตามระบบหลัก โมดูล และผู้รับผิดชอบ' },
+  kanban: { title: 'Kanban Board', description: 'ติดตามงานตั้งแต่ร่างข้อกำหนดจนถึงส่งมอบ ลากการ์ดหรือกด "ส่งต่อ" เพื่อเปลี่ยนสถานะ' },
+  explorer: { title: 'ตาราง Requirement', description: 'ค้นหา กรอง และจัดการ Requirement ทั้งหมดตามระบบหลักและโมดูล' },
+  priority: { title: 'แยกตาม Priority', description: 'จัดลำดับงานจาก High ไป Low เพื่อวางแผนให้ทันกำหนด SIT' },
+};
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -182,7 +189,7 @@ export default function HomePage() {
       : 100;
 
   return (
-    <div className="min-h-screen bg-[#F4F8FD] text-slate-900 pb-20">
+    <div className="min-h-screen bg-canvas text-slate-900 pb-16">
       <AppHeader
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -197,9 +204,9 @@ export default function HomePage() {
         onExport={() => void handleExportExcel(t.requirements, 'All Requirements')}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-5 space-y-5">
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
         {t.mode === 'local' && (
-          <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-xs text-amber-900">
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>
               <b>Demo mode:</b> ยังไม่ได้เชื่อมต่อ Supabase — ข้อมูลถูกเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น
@@ -208,13 +215,13 @@ export default function HomePage() {
           </div>
         )}
         {t.warning && (
-          <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-xs text-amber-900">
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{t.warning}</span>
           </div>
         )}
         {t.loadError && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-xs text-red-800">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
             <span className="flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               {t.loadError}
@@ -222,14 +229,19 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => void t.reload()}
-              className="shrink-0 px-3 py-1 rounded-lg bg-white border border-red-200 font-bold hover:bg-red-100"
+              className="shrink-0 px-3 py-1 rounded-lg bg-white border border-red-200 font-semibold hover:bg-red-100"
             >
               ลองใหม่
             </button>
           </div>
         )}
 
-        <SitCountdownBanner requirements={t.requirements} />
+        <div>
+          <h2 className="text-xl font-bold text-jiffy-ink leading-tight">{TAB_HEADINGS[activeTab].title}</h2>
+          <p className="text-sm text-slate-600 mt-0.5">{TAB_HEADINGS[activeTab].description}</p>
+        </div>
+
+        {activeTab === 'dashboard' && <SitCountdownBanner requirements={t.requirements} />}
 
         {t.loading && t.requirements.length === 0 && !t.loadError ? (
           <TabLoading label="กำลังโหลดข้อมูล..." />

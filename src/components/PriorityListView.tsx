@@ -193,11 +193,11 @@ export default function PriorityListView({
   return (
     <div className="space-y-3.5">
       {/* Top Bar */}
-      <div className="bg-white rounded-2xl border border-[#DCEBFF] shadow-xs p-3.5 space-y-3">
+      <div className="bg-white rounded-xl border border-line shadow-card p-3.5 space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm sm:text-base font-bold text-[#044492] flex items-center gap-1.5 mr-1">
-              <ListOrdered className="w-4 h-4 text-[#0086FF] shrink-0" />
+            <h2 className="text-sm sm:text-base font-bold text-jiffy-navy flex items-center gap-1.5 mr-1">
+              <ListOrdered className="w-4 h-4 text-jiffy-blue shrink-0" />
               แยกตาม Priority (Priority List View)
             </h2>
 
@@ -207,7 +207,7 @@ export default function PriorityListView({
               onClick={() => setSelectedPriority('ALL')}
               className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${
                 selectedPriority === 'ALL'
-                  ? 'bg-[#044492] text-white border-[#044492] shadow-xs'
+                  ? 'bg-jiffy-navy text-white border-jiffy-navy shadow-card'
                   : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
               }`}
             >
@@ -231,7 +231,7 @@ export default function PriorityListView({
                 >
                   <PriorityGroupIcon priority={meta.value} />
                   <span>{meta.shortLabel}</span>
-                  <span className={`px-1.5 py-0 rounded-full text-[11px] border ${meta.pillBadgeClass}`}>
+                  <span className={`px-1.5 py-0 rounded-full text-xs border ${meta.pillBadgeClass}`}>
                     {activeItems.length}/{allItems.length}
                   </span>
                 </button>
@@ -251,7 +251,7 @@ export default function PriorityListView({
                 const scopeTitle = parts.length > 0 ? parts.join(' - ') : 'Priority List View';
                 onExportExcel(flatExportItems, scopeTitle);
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors shadow-card"
             >
               <Download className="w-3.5 h-3.5" />
               Export Excel
@@ -266,7 +266,7 @@ export default function PriorityListView({
                   selectedPriority !== 'ALL' ? selectedPriority : undefined
                 )
               }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-slate-950 bg-[#FFCB06] hover:bg-[#E5B600] rounded-xl shadow-xs transition-all"
+              className="btn-brand !px-3 !py-1.5 !text-xs"
             >
               <Plus className="w-3.5 h-3.5" />
               เพิ่ม Requirement
@@ -373,29 +373,29 @@ export default function PriorityListView({
           return (
             <div
               key={meta.value}
-              className={`${meta.containerClass} rounded-2xl p-3.5 sm:p-4 border shadow-sm space-y-2.5`}
+              className={`${meta.containerClass} rounded-xl p-3.5 sm:p-4 border shadow-sm space-y-2.5`}
             >
               {/* Group Header */}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className={`text-sm font-extrabold flex items-center gap-1.5 ${meta.titleClass}`}>
+                  <h3 className={`text-sm font-bold flex items-center gap-1.5 ${meta.titleClass}`}>
                     <PriorityGroupIcon priority={meta.value} />
                     {meta.label}
                   </h3>
-                  <span className={`hidden lg:inline text-[11px] ${meta.subtitleClass}`}>
+                  <span className={`hidden lg:inline text-xs ${meta.subtitleClass}`}>
                     • คลิกที่รายการเพื่อดูรายละเอียด
                   </span>
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-[11px] font-extrabold border px-2.5 py-0.5 rounded-full ${meta.countPillClass}`}>
+                  <span className={`text-xs font-bold border px-2.5 py-0.5 rounded-full ${meta.countPillClass}`}>
                     {allItems.length} รายการ
                   </span>
                   <button
                     type="button"
                     onClick={() => onExportExcel(allItems, `Priority ${meta.value}`)}
                     disabled={allItems.length === 0}
-                    className={`inline-flex items-center gap-1 text-[11px] font-semibold border px-2 py-0.5 rounded-full transition-colors disabled:opacity-40 ${meta.controlBtnClass}`}
+                    className={`inline-flex items-center gap-1 text-xs font-semibold border px-2 py-0.5 rounded-full transition-colors disabled:opacity-40 ${meta.controlBtnClass}`}
                     title={`Export รายการระดับ ${meta.value}`}
                   >
                     <Download className="w-3 h-3" />
@@ -404,7 +404,7 @@ export default function PriorityListView({
                   <button
                     type="button"
                     onClick={() => toggleGroupCollapse(meta.value)}
-                    className={`inline-flex items-center gap-1 text-[11px] font-semibold border px-2 py-0.5 rounded-full transition-colors ${meta.controlBtnClass}`}
+                    className={`inline-flex items-center gap-1 text-xs font-semibold border px-2 py-0.5 rounded-full transition-colors ${meta.controlBtnClass}`}
                   >
                     {isCollapsed ? (
                       <>
@@ -428,7 +428,7 @@ export default function PriorityListView({
                 ) : (
                   <div className={`${meta.innerBoxClass} rounded-xl border overflow-hidden`}>
                     {/* Header */}
-                    <div className={`hidden md:grid md:grid-cols-12 gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${meta.tableHeaderClass}`}>
+                    <div className={`hidden md:grid md:grid-cols-12 gap-2 px-3 py-1.5 text-xs font-bold uppercase tracking-normal ${meta.tableHeaderClass}`}>
                       <div className="col-span-2">Req ID</div>
                       <div className="col-span-3">Core / Module</div>
                       <div className="col-span-4">หัวข้อ & รายละเอียด Requirement</div>
@@ -448,7 +448,7 @@ export default function PriorityListView({
                         return (
                           <React.Fragment key={req.id}>
                             {isFirstDone && activeItems.length > 0 && (
-                              <div className="px-3 py-1 bg-slate-50/95 border-y border-slate-200/80 flex items-center gap-1.5 text-[10px] font-bold text-emerald-700">
+                              <div className="px-3 py-1 bg-slate-50/95 border-y border-slate-200/80 flex items-center gap-1.5 text-xs font-bold text-emerald-700">
                                 <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
                                 เสร็จสมบูรณ์ (Done / Released) — {doneItems.length} รายการ
                               </div>
@@ -466,7 +466,7 @@ export default function PriorityListView({
                               <div className="md:col-span-2 flex items-center justify-between md:justify-start gap-1.5">
                                 <div className="flex items-center gap-1 min-w-0">
                                   <span
-                                    className={`font-mono text-[11px] font-extrabold px-2 py-0.5 rounded-md border transition-colors shrink-0 ${
+                                    className={`font-mono text-xs font-bold px-2 py-0.5 rounded-md border transition-colors shrink-0 ${
                                       isDone
                                         ? 'text-slate-600 bg-slate-100 border-slate-200'
                                         : meta.reqIdBadgeClass
@@ -476,7 +476,7 @@ export default function PriorityListView({
                                   </span>
                                   {req.images && req.images.length > 0 && (
                                     <span
-                                      className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded border border-indigo-100 flex items-center gap-0.5 shrink-0"
+                                      className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded border border-indigo-100 flex items-center gap-0.5 shrink-0"
                                       title={`${req.images.length} รูป Wireframe`}
                                     >
                                       <ImageIcon className="w-2.5 h-2.5" />
@@ -485,17 +485,17 @@ export default function PriorityListView({
                                   )}
                                 </div>
 
-                                <span className={`md:hidden text-[10px] font-bold px-1.5 py-0.5 rounded border ${statusColor}`}>
+                                <span className={`md:hidden text-xs font-bold px-1.5 py-0.5 rounded border ${statusColor}`}>
                                   {req.status}
                                 </span>
                               </div>
 
                               {/* Core & Module */}
                               <div className="md:col-span-3 flex items-center gap-1 min-w-0">
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${coreMeta.badgeBg} ${coreMeta.badgeText} ${coreMeta.badgeBorder}`}>
+                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded border shrink-0 ${coreMeta.badgeBg} ${coreMeta.badgeText} ${coreMeta.badgeBorder}`}>
                                   {coreMeta.shortName}
                                 </span>
-                                <span className="text-[11px] font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 truncate">
+                                <span className="text-xs font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 truncate">
                                   {req.module}
                                 </span>
                               </div>
@@ -510,13 +510,13 @@ export default function PriorityListView({
                                 >
                                   {req.title || req.details}
                                 </p>
-                                <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                                <p className="text-xs text-slate-500 truncate mt-0.5">
                                   {req.details}
                                 </p>
                               </div>
 
                               {/* Dev & Version */}
-                              <div className="md:col-span-2 flex flex-col justify-center min-w-0 text-[11px]">
+                              <div className="md:col-span-2 flex flex-col justify-center min-w-0 text-xs">
                                 {req.dev_assigned ? (
                                   <span className="font-semibold text-indigo-900 truncate">
                                     Dev: {req.dev_assigned}
@@ -525,7 +525,7 @@ export default function PriorityListView({
                                   <span className="text-slate-400 italic">ยังไม่มอบหมาย</span>
                                 )}
                                 {req.target_version && (
-                                  <span className="text-[10px] text-slate-500 font-mono">
+                                  <span className="text-xs text-slate-500 font-mono">
                                     {req.target_version}
                                   </span>
                                 )}
@@ -533,7 +533,7 @@ export default function PriorityListView({
 
                               {/* Status */}
                               <div className="md:col-span-1 text-right hidden md:block">
-                                <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${statusColor}`}>
+                                <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border ${statusColor}`}>
                                   {req.status}
                                 </span>
                               </div>

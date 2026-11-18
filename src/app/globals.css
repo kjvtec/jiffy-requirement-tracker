@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f3f6fb;
+  --foreground: #0f1f3d;
 }
 
 html,
@@ -19,9 +19,10 @@ button {
 body {
   color: var(--foreground);
   background: var(--background);
-  line-height: 1.55;
-  letter-spacing: 0.004em;
+  font-size: 14px;
+  line-height: 1.6;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 code,
@@ -30,58 +31,52 @@ pre,
   font-family: var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-/* Single focused blinking beacon for Hero Need Info card */
-@keyframes needInfoBeacon {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.38), 0 0 8px rgba(249, 115, 22, 0.16);
-    border-color: rgba(249, 115, 22, 0.7);
-    background-color: rgba(255, 247, 237, 0.9);
+/* Keyboard focus is always visible and uses the Jiffy blue. */
+:focus-visible {
+  outline: 2px solid #0086ff;
+  outline-offset: 2px;
+}
+
+::selection {
+  background: #cfe6ff;
+}
+
+@layer components {
+  /* Surfaces */
+  .card {
+    @apply bg-white border border-line rounded-xl shadow-card;
   }
-  50% {
-    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0), 0 0 18px rgba(249, 115, 22, 0.48);
-    border-color: rgba(234, 88, 12, 0.98);
-    background-color: rgba(255, 237, 213, 1);
+
+  /* Buttons: one yellow primary per screen, everything else is secondary */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold
+      transition-colors disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-jiffy-yellow text-jiffy-ink hover:bg-jiffy-gold shadow-card;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-jiffy-navy border border-line hover:bg-jiffy-sky hover:border-jiffy-mist;
+  }
+  .btn-brand {
+    @apply btn bg-jiffy-navy text-white hover:bg-jiffy-blue;
+  }
+
+  /* Form controls */
+  .field {
+    @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-slate-900
+      placeholder:text-slate-400 transition-colors
+      hover:border-slate-300 focus:border-jiffy-blue focus:outline-none focus:ring-2 focus:ring-jiffy-blue/25;
   }
 }
 
-.need-info-beacon {
-  animation: needInfoBeacon 1.45s ease-in-out infinite;
-}
-
-/* Subtle SIT Countdown Progress Bar shimmer sweep */
-@keyframes sitShimmerSweep {
-  0% {
-    transform: translateX(-120%);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  100% {
-    transform: translateX(220%);
-  }
-}
-
-.sit-shimmer-sweep::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.28) 50%,
-    transparent 100%
-  );
-  will-change: transform;
-  animation: sitShimmerSweep 3.2s ease-in-out infinite;
-}
-
-/* Static crisp glow around SIT readiness banner (avoids 60fps box-shadow repaints) */
-.sit-glow-green {
-  box-shadow: 0 6px 20px -4px rgba(16, 185, 129, 0.16), 0 1px 3px rgba(15, 23, 42, 0.05);
-}
-
-.sit-glow-yellow {
-  box-shadow: 0 6px 22px -4px rgba(245, 158, 11, 0.20), 0 1px 3px rgba(15, 23, 42, 0.06);
-}
-
-.sit-glow-red {
-  box-shadow: 0 6px 24px -4px rgba(239, 68, 68, 0.24), 0 1px 3px rgba(15, 23, 42, 0.06);
 }

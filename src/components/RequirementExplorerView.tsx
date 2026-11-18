@@ -98,16 +98,16 @@ const RequirementTable = React.memo(function RequirementTable({
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-slate-50/90 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+          <tr className="bg-slate-50/90 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-normal">
             <th
               onClick={() => onSort('req_id')}
               className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors w-32"
             >
               <div className="flex items-center gap-1">
                 Req ID
-                <ArrowUpDown className={`w-3 h-3 ${sortField === 'req_id' ? 'text-[#0086FF]' : 'text-slate-400'}`} />
+                <ArrowUpDown className={`w-3 h-3 ${sortField === 'req_id' ? 'text-jiffy-blue' : 'text-slate-400'}`} />
                 {sortField === 'req_id' && (
-                  <span className="text-[9px] text-[#0086FF]">{sortAsc ? '↑' : '↓'}</span>
+                  <span className="text-[9px] text-jiffy-blue">{sortAsc ? '↑' : '↓'}</span>
                 )}
               </div>
             </th>
@@ -167,10 +167,10 @@ const RequirementTable = React.memo(function RequirementTable({
                 {/* 1. Req ID */}
                 <td className="py-3.5 px-4 align-top">
                   <div className="flex flex-col items-start gap-1">
-                    <span className="font-mono text-xs font-bold text-[#044492] bg-[#EFF7FF] px-2.5 py-1 rounded-lg border border-[#CFE4FF] group-hover:bg-[#0086FF] group-hover:border-[#0086FF] group-hover:text-white transition-colors">
+                    <span className="font-mono text-xs font-bold text-jiffy-navy bg-jiffy-sky px-2.5 py-1 rounded-lg border border-[#CFE4FF] group-hover:bg-jiffy-blue group-hover:border-[#0086FF] group-hover:text-white transition-colors">
                       {displayId}
                     </span>
-                    <span className="text-[10px] font-medium text-slate-500 px-1">
+                    <span className="text-xs font-medium text-slate-500 px-1">
                       {req.type || 'New Feature'}
                     </span>
                   </div>
@@ -179,7 +179,7 @@ const RequirementTable = React.memo(function RequirementTable({
                 {/* 2. Core / Module */}
                 <td className="py-3.5 px-4 align-top">
                   {showCoreColumn && (
-                    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border mb-1 ${meta.badgeBg} ${meta.badgeText} ${meta.badgeBorder}`}>
+                    <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border mb-1 ${meta.badgeBg} ${meta.badgeText} ${meta.badgeBorder}`}>
                       {meta.shortName}
                     </span>
                   )}
@@ -208,14 +208,14 @@ const RequirementTable = React.memo(function RequirementTable({
                     <span className="w-1.5 h-1.5 rounded-full bg-current" />
                     {req.status}
                   </span>
-                  <span className="block text-[10px] font-medium text-slate-500 mt-1">
+                  <span className="block text-xs font-medium text-slate-500 mt-1">
                     {getStatusShortTh(req.status)}
                   </span>
                 </td>
 
                 {/* 5. Title & Details */}
                 <td className="py-3.5 px-4 align-top">
-                  <div className="font-bold text-slate-900 group-hover:text-[#0086FF] transition-colors line-clamp-1 text-xs sm:text-sm">
+                  <div className="font-bold text-slate-900 group-hover:text-jiffy-blue transition-colors line-clamp-1 text-xs sm:text-sm">
                     {req.title || req.details}
                   </div>
                   <p className="text-slate-600 font-normal line-clamp-2 text-xs leading-relaxed mt-1">
@@ -223,13 +223,13 @@ const RequirementTable = React.memo(function RequirementTable({
                   </p>
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
                     {req.images && req.images.length > 0 && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
                         <ImageIcon className="w-3 h-3" />
                         {req.images.length} รูป Wireframe
                       </span>
                     )}
                     {req.remark && (
-                      <span className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md line-clamp-1 max-w-sm">
+                      <span className="text-xs text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md line-clamp-1 max-w-sm">
                         หมายเหตุ: {req.remark}
                       </span>
                     )}
@@ -245,7 +245,7 @@ const RequirementTable = React.memo(function RequirementTable({
                         {req.dev_assigned}
                       </span>
                       {req.target_version && (
-                        <span className="text-[10px] font-mono font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-1">
+                        <span className="text-xs font-mono font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-1">
                           {req.target_version}
                         </span>
                       )}
@@ -260,7 +260,7 @@ const RequirementTable = React.memo(function RequirementTable({
                   <p className="text-xs font-bold text-slate-800">
                     {req.requested_by || 'Unknown'}
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-400 mt-0.5">
                     {req.request_date
                       ? new Date(req.request_date).toLocaleDateString('th-TH')
                       : '-'}
@@ -545,7 +545,7 @@ export default function RequirementExplorerView({
   return (
     <div className="space-y-4">
       {/* Search and Filters Bar */}
-      <div className="bg-white rounded-2xl border border-[#DCEBFF] shadow-xs p-4 space-y-3">
+      <div className="bg-white rounded-xl border border-line shadow-card p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
           {/* Search Input */}
           <div className="md:col-span-4 relative">
@@ -555,7 +555,7 @@ export default function RequirementExplorerView({
               placeholder="ค้นหา Req ID, หัวข้อ, รายละเอียด, Dev, ผู้ขอ..."
               value={filter.search}
               onChange={(e) => onFilterChange((prev) => ({ ...prev, search: e.target.value }))}
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#0086FF] outline-none transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-jiffy-blue outline-none transition-all"
             />
           </div>
 
@@ -564,7 +564,7 @@ export default function RequirementExplorerView({
             <select
               value={filter.status}
               onChange={(e) => onFilterChange((prev) => ({ ...prev, status: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-[#0086FF] outline-none"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-jiffy-blue outline-none"
             >
               <option value="">ทุกสถานะ (Status)</option>
               <option value="Draft">Draft (ร่างข้อกำหนด)</option>
@@ -580,7 +580,7 @@ export default function RequirementExplorerView({
             <select
               value={filter.priority}
               onChange={(e) => onFilterChange((prev) => ({ ...prev, priority: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-[#0086FF] outline-none"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-jiffy-blue outline-none"
             >
               <option value="">ทุก Priority</option>
               <option value="1.High">1.High</option>
@@ -594,7 +594,7 @@ export default function RequirementExplorerView({
             <select
               value={filter.dev_assigned || ''}
               onChange={(e) => onFilterChange((prev) => ({ ...prev, dev_assigned: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-[#0086FF] outline-none"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-jiffy-blue outline-none"
             >
               <option value="">Dev ผู้รับผิดชอบทั้งหมด</option>
               {teamMembers.map((tm) => (
@@ -618,7 +618,7 @@ export default function RequirementExplorerView({
                 ล้างตัวกรอง
               </button>
             )}
-            <span className="text-xs font-bold text-[#044492] px-2.5 py-1 bg-blue-50 rounded-lg border border-blue-200">
+            <span className="text-xs font-bold text-jiffy-navy px-2.5 py-1 bg-blue-50 rounded-lg border border-blue-200">
               {matchingRequirements.length} รายการ
             </span>
           </div>
@@ -635,7 +635,7 @@ export default function RequirementExplorerView({
               }}
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all ${
                 !selectedCore
-                  ? 'bg-[#044492] text-white shadow-xs'
+                  ? 'bg-jiffy-navy text-white shadow-card'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
@@ -651,8 +651,8 @@ export default function RequirementExplorerView({
                   onClick={() => onSelectModule(null)}
                   className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all ${
                     !selectedModule
-                      ? 'bg-[#0086FF] text-white shadow-xs'
-                      : 'bg-blue-50 hover:bg-blue-100 text-[#044492]'
+                      ? 'bg-jiffy-blue text-white shadow-card'
+                      : 'bg-blue-50 hover:bg-blue-100 text-jiffy-navy'
                   }`}
                 >
                   <FolderOpen className="w-3.5 h-3.5" />
@@ -664,7 +664,7 @@ export default function RequirementExplorerView({
             {selectedCore && selectedModule && (
               <>
                 <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold bg-[#044492] text-white shadow-xs">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold bg-jiffy-navy text-white shadow-card">
                   <Layers className="w-3.5 h-3.5" />
                   {selectedModule}
                 </span>
@@ -684,9 +684,9 @@ export default function RequirementExplorerView({
                     onSelectCore(c.core);
                     onSelectModule(null);
                   }}
-                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition-all ${
                     active
-                      ? 'bg-[#044492] text-white border-[#044492] shadow-xs'
+                      ? 'bg-jiffy-navy text-white border-jiffy-navy shadow-card'
                       : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200'
                   }`}
                 >
@@ -699,7 +699,7 @@ export default function RequirementExplorerView({
       </div>
 
       {/* Main Content Area */}
-      <div className="bg-white rounded-2xl border border-[#DCEBFF] shadow-xs overflow-hidden">
+      <div className="bg-white rounded-xl border border-line shadow-card overflow-hidden">
         {/* Table Header Bar */}
         <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -719,7 +719,7 @@ export default function RequirementExplorerView({
             <button
               type="button"
               onClick={() => onExportExcel(matchingRequirements, selectedModule || selectedCore || 'All Requirements')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs"
+              className="btn-secondary !px-3 !py-1.5 !text-xs"
             >
               <Download className="w-3.5 h-3.5" />
               Export Excel
@@ -728,7 +728,7 @@ export default function RequirementExplorerView({
             <button
               type="button"
               onClick={() => onCreateRequirement(selectedCore || DEFAULT_CORE_FUNCTION, selectedModule || undefined)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFCB06] hover:bg-[#E5B600] text-slate-950 text-xs font-black transition-all shadow-xs"
+              className="btn-brand !px-3 !py-1.5 !text-xs"
             >
               <Plus className="w-3.5 h-3.5" />
               เพิ่ม Requirement
@@ -765,7 +765,7 @@ export default function RequirementExplorerView({
               <button
                 type="button"
                 onClick={clearFilters}
-                className="mt-3 px-4 py-1.5 rounded-lg bg-[#0086FF] text-white text-xs font-semibold"
+                className="mt-3 px-4 py-1.5 rounded-lg bg-jiffy-blue text-white text-xs font-semibold"
               >
                 ล้างตัวกรอง
               </button>
