@@ -1,7 +1,9 @@
 import type {
   ActivityEntry,
   CoreFunctionType,
+  Developer,
   Requirement,
+  RequirementFile,
   RequirementImage,
   RequirementInput,
   RequirementStatusType,
@@ -12,10 +14,15 @@ import type {
 export interface TrackerSnapshot {
   requirements: Requirement[];
   modules: SystemModule[];
+  /** Requesters: the people who open a requirement. */
   team: TeamMember[];
+  /** Developers who can be assigned to a requirement (separate list from requesters). */
+  developers: Developer[];
   /** Set when the database is reachable but optional tables are missing. */
   warning?: string;
 }
+
+export type NewFile = Omit<RequirementFile, 'id' | 'requirement_id' | 'created_at'>;
 
 /**
  * Persistence contract used by the UI. Two implementations exist:
@@ -26,7 +33,7 @@ export interface DataStore {
   readonly mode: 'supabase' | 'local';
 
   load(): Promise<TrackerSnapshot>;
-  loadRequirements(): Promise<Requirement[]>;
+  loadRequirements(): Promise<{ requirements: Requirement[]; warning?: string }>;
 
   createRequirement(
     input: RequirementInput,
@@ -47,6 +54,14 @@ export interface DataStore {
   ): Promise<void>;
   deleteRequirement(id: string): Promise<void>;
 
+  /** A developer asks the requester for more information. */
+  requestInfo(id: string, note: string, askedBy: string): Promise<void>;
+  /** The requester answers; clears the "waiting for information" flag. */
+  replyInfo(id: string, message: string, repliedBy: string): Promise<void>;
+
+  addFile(requirementId: string, file: NewFile, actor: string): Promise<void>;
+  deleteFile(fileId: string): Promise<void>;
+
   loadActivity(requirementId: string): Promise<ActivityEntry[]>;
   addComment(requirementId: string, actor: string, message: string): Promise<void>;
 
@@ -54,4 +69,5 @@ export interface DataStore {
   renameModule(core: CoreFunctionType, oldName: string, newName: string): Promise<void>;
   deleteModule(core: CoreFunctionType, name: string): Promise<void>;
   addTeamMember(name: string, role?: string): Promise<void>;
+  addDeveloper(name: string): Promise<void>;
 }

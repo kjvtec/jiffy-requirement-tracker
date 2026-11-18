@@ -7,24 +7,21 @@ import {
   RefreshCw,
   LayoutDashboard,
   FolderTree,
-  Columns3,
   ListOrdered,
+  CircleHelp,
   ExternalLink,
-  UserCircle2,
 } from 'lucide-react';
-import type { TeamMember } from '@/types';
 
-export type ActiveTab = 'dashboard' | 'kanban' | 'explorer' | 'priority';
+export type ActiveTab = 'dashboard' | 'explorer' | 'priority';
 
 interface AppHeaderProps {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
   total: number;
+  /** Requirements a developer is waiting on more information for (blinks when > 0). */
+  needsInfoCount: number;
   loading: boolean;
   exporting: boolean;
-  team: TeamMember[];
-  currentUser: string;
-  onCurrentUserChange: (name: string) => void;
   onCreate: () => void;
   onRefresh: () => void;
   onExport: () => void;
@@ -36,21 +33,23 @@ export default function AppHeader({
   activeTab,
   onTabChange,
   total,
+  needsInfoCount,
   loading,
   exporting,
-  team,
-  currentUser,
-  onCurrentUserChange,
   onCreate,
   onRefresh,
   onExport,
 }: AppHeaderProps) {
-  const tabs: Array<{ id: ActiveTab; label: string; icon: React.ReactNode; count?: number }> = [
-    { id: 'dashboard', label: 'ภาพรวม', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'kanban', label: 'Kanban', icon: <Columns3 className="w-4 h-4" />, count: total },
+  const tabs: Array<{ id: ActiveTab; label: string; icon: React.ReactNode; count?: number; alert?: number }> = [
+    { id: 'dashboard', label: 'ภาพรวม', icon: <LayoutDashboard className="w-4 h-4" />, alert: needsInfoCount },
     { id: 'explorer', label: 'ตาราง Requirement', icon: <FolderTree className="w-4 h-4" />, count: total },
     { id: 'priority', label: 'แยกตาม Priority', icon: <ListOrdered className="w-4 h-4" /> },
   ];
+  const TAB_ICON_TONE: Record<ActiveTab, string> = {
+    dashboard: 'text-sky-300',
+    explorer: 'text-emerald-300',
+    priority: 'text-amber-300',
+  };
 
   return (
     <header className="sticky top-0 z-30">
@@ -73,23 +72,6 @@ export default function AppHeader({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <label className="hidden md:flex items-center gap-2 h-9 pl-2.5 pr-1.5 rounded-lg border border-line bg-white text-sm hover:border-slate-300">
-                <UserCircle2 className="w-4 h-4 text-jiffy-blue" aria-hidden />
-                <span className="text-slate-500">ผู้ใช้งาน</span>
-                <select
-                  value={currentUser}
-                  onChange={(e) => onCurrentUserChange(e.target.value)}
-                  className="bg-transparent font-semibold text-jiffy-navy outline-none cursor-pointer max-w-[120px]"
-                  aria-label="ผู้ใช้งานปัจจุบัน"
-                >
-                  {team.map((t) => (
-                    <option key={t.id} value={t.name}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
               <a
                 href={HQ_URL}
                 target="_blank"
@@ -129,8 +111,14 @@ export default function AppHeader({
                       : 'text-blue-100/80 border-transparent hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  {t.icon}
+                  <span className={active ? 'text-jiffy-yellow' : TAB_ICON_TONE[t.id]}>{t.icon}</span>
                   {t.label}
+                  {t.alert ? (
+                    <span className="need-info-beacon inline-flex items-center gap-1 rounded-full border-2 px-2 text-xs font-bold text-orange-800" title={`Dev ขอข้อมูลเพิ่ม ${t.alert} เรื่อง`}>
+                      <CircleHelp className="w-3 h-3" aria-hidden />
+                      {t.alert}
+                    </span>
+                  ) : null}
                   {t.count !== undefined && (
                     <span
                       className={`min-w-[22px] px-1.5 rounded-full text-xs font-semibold text-center ${

@@ -1,5 +1,5 @@
 export type PriorityType = '1.High' | '2.Medium' | '3.Low';
-export type RequirementStatusType = 'Draft' | 'In Review' | 'In Development' | 'Testing' | 'Done';
+export type RequirementStatusType = 'New' | 'In Development' | 'Testing' | 'Done';
 export type RequirementType =
   | 'New Feature'
   | 'Change Request (CR)'
@@ -7,13 +7,7 @@ export type RequirementType =
   | 'Integration / API'
   | 'Report / Export';
 
-export const REQUIREMENT_STATUSES: RequirementStatusType[] = [
-  'Draft',
-  'In Review',
-  'In Development',
-  'Testing',
-  'Done',
-];
+export const REQUIREMENT_STATUSES: RequirementStatusType[] = ['New', 'In Development', 'Testing', 'Done'];
 
 export const REQUIREMENT_TYPES: RequirementType[] = [
   'New Feature',
@@ -171,18 +165,50 @@ export interface Requirement {
   request_date: string;
   status: RequirementStatusType;
   dev_assigned: string | null;
-  target_version: string | null;
-  remark: string | null;
+  /** True while a developer is waiting for more information from the requester. */
+  info_requested: boolean;
+  info_request_note: string | null;
+  info_requested_by: string | null;
+  info_requested_at: string | null;
   created_at: string;
   updated_at: string;
   images: RequirementImage[];
+  files: RequirementFile[];
+}
+
+/** A file a developer attached; the file itself lives in Google Drive. */
+export interface RequirementFile {
+  id: string;
+  requirement_id: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string | null;
+  drive_file_id: string;
+  web_view_link: string;
+  uploaded_by: string;
+  created_at: string;
 }
 
 /** Fields the user edits when creating / updating a requirement. */
 export type RequirementInput = Omit<
   Requirement,
-  'id' | 'req_id' | 'created_at' | 'updated_at' | 'images'
+  | 'id'
+  | 'req_id'
+  | 'created_at'
+  | 'updated_at'
+  | 'images'
+  | 'files'
+  | 'info_requested'
+  | 'info_request_note'
+  | 'info_requested_by'
+  | 'info_requested_at'
 >;
+
+/** Developers are a separate list from requesters (TeamMember). */
+export interface Developer {
+  id: number;
+  name: string;
+}
 
 export interface TeamMember {
   id: number;
@@ -204,6 +230,8 @@ export interface RequirementFilter {
   module: string;
   requested_by: string;
   dev_assigned: string;
+  /** Only requirements waiting for more information from the requester. */
+  needs_info: boolean;
 }
 
 export const EMPTY_FILTER: RequirementFilter = {
@@ -214,9 +242,17 @@ export const EMPTY_FILTER: RequirementFilter = {
   module: '',
   requested_by: '',
   dev_assigned: '',
+  needs_info: false,
 };
 
-export type ActivityAction = 'created' | 'status_change' | 'comment' | 'update';
+export type ActivityAction =
+  | 'created'
+  | 'status_change'
+  | 'comment'
+  | 'update'
+  | 'info_request'
+  | 'info_reply'
+  | 'file';
 
 export interface ActivityEntry {
   id: string;
@@ -229,6 +265,7 @@ export interface ActivityEntry {
   created_at: string;
 }
 
+/** Default requesters (people who open a requirement). */
 export const DEFAULT_TEAM: Array<{ name: string; role: string }> = [
   { name: 'Aoy', role: 'Project Lead' },
   { name: 'Kampon', role: 'Dev / Lead' },
@@ -236,3 +273,6 @@ export const DEFAULT_TEAM: Array<{ name: string; role: string }> = [
   { name: 'Tukta', role: 'Dev / Member' },
   { name: 'Nat', role: 'Dev / Member' },
 ];
+
+/** Default developers (kept separate from requesters; more can be added in the app). */
+export const DEFAULT_DEVELOPERS: string[] = ['Kampon', 'Tukta', 'Nat'];

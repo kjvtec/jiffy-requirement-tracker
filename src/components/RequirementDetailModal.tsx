@@ -1,108 +1,174 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   X,
   Edit,
   Trash2,
   Layers,
   Code2,
-  Save,
   ZoomIn,
   FileText,
   MessageSquare,
   History,
   Send,
+  CircleHelp,
+  CheckCheck,
+  UserRound,
+  CalendarClock,
+  Sparkles,
+  Activity,
+  Paperclip,
+  Images,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   CORE_FUNCTION_META,
   REQUIREMENT_STATUSES,
   type ActivityEntry,
+  type Developer,
   type Requirement,
   type RequirementStatusType,
   type TeamMember,
 } from '@/types';
-import { getStatusBadgeClass, getStatusShortTh } from '@/lib/status';
+import { CORE_ICON } from '@/lib/coreIcons';
+import { STATUS_META } from '@/lib/status';
+import type { NewFile } from '@/lib/data/store';
+import { PriorityBadge, formatDateTime } from './Badges';
+import DriveFilesPanel from './DriveFilesPanel';
 import LightboxModal from './LightboxModal';
 
 interface RequirementDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   requirement: Requirement | null;
+  /** Requesters */
   team: TeamMember[];
+  developers: Developer[];
+  rememberedName: string;
   onEdit: (requirement: Requirement) => void;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: RequirementStatusType) => Promise<void>;
-  onQuickUpdate: (
-    id: string,
-    patch: Pick<Requirement, 'dev_assigned' | 'target_version' | 'remark'>
-  ) => Promise<void>;
+  onAssignDev: (id: string, dev: string | null) => Promise<void>;
+  onRequestInfo: (id: string, note: string, askedBy: string) => Promise<void>;
+  onReplyInfo: (id: string, message: string, repliedBy: string) => Promise<void>;
+  onAddFile: (id: string, file: NewFile) => Promise<void>;
+  onDeleteFile: (fileId: string) => Promise<void>;
   loadActivity: (id: string) => Promise<ActivityEntry[]>;
-  onAddComment: (id: string, message: string) => Promise<void>;
+  onAddComment: (id: string, message: string, by: string) => Promise<void>;
 }
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+function SectionTitle({ icon: Icon, tone, children }: { icon: LucideIcon; tone: string; children: React.ReactNode }) {
+  return (
+    <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+      <span className={`h-7 w-7 rounded-lg text-white flex items-center justify-center ${tone}`}>
+        <Icon className="w-4 h-4" aria-hidden />
+      </span>
+      {children}
+    </h4>
+  );
+}
+
+const ACTIVITY_STYLE: Record<ActivityEntry['action'], { dot: string; icon: LucideIcon }> = {
+  created: { dot: 'bg-sky-500', icon: Sparkles },
+  status_change: { dot: 'bg-emerald-500', icon: Activity },
+  comment: { dot: 'bg-amber-400', icon: MessageSquare },
+  update: { dot: 'bg-slate-400', icon: Edit },
+  info_request: { dot: 'bg-orange-500', icon: CircleHelp },
+  info_reply: { dot: 'bg-teal-500', icon: CheckCheck },
+  file: { dot: 'bg-violet-500', icon: Paperclip },
+};
 
 export default function RequirementDetailModal({
   isOpen,
   onClose,
   requirement,
   team,
+  developers,
+  rememberedName,
   onEdit,
   onDelete,
   onStatusChange,
-  onQuickUpdate,
+  onAssignDev,
+  onRequestInfo,
+  onReplyInfo,
+  onAddFile,
+  onDeleteFile,
   loadActivity,
   onAddComment,
 }: RequirementDetailModalProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState<string | false>(false);
 
   const [devAssigned, setDevAssigned] = useState('');
-  const [targetVersion, setTargetVersion] = useState('');
-  const [remark, setRemark] = useState('');
+  const [savingDev, setSavingDev] = useState(false);
+
+  // information request (Dev -> requester) and the requester's answer
+  const [asking, setAsking] = useState(false);
+  const [askNote, setAskNote] = useState('');
+  const [askBy, setAskBy] = useState('');
+  const [replyText, setReplyText] = useState('');
+  const [replyBy, setReplyBy] = useState('');
+  const [busyInfo, setBusyInfo] = useState(false);
 
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [comment, setComment] = useState('');
+  const [commentBy, setCommentBy] = useState('');
   const [isCommenting, setIsCommenting] = useState(false);
 
   const reqId = requirement?.id;
   const reqStatus = requirement?.status;
+  const reqInfo = requirement?.info_requested;
 
-  // Re-sync the quick-edit fields whenever a different requirement is shown
-  // or the saved values change underneath us.
+  const everyone = useMemo(
+    () => Array.from(new Set([...developers.map((d) => d.name), ...team.map((t) => t.name)])),
+    [developers, team]
+  );
+
+  // Re-sync local fields whenever a different requirement is shown.
   useEffect(() => {
     if (!requirement) return;
     setDevAssigned(requirement.dev_assigned || '');
-    setTargetVersion(requirement.target_version || '');
-    setRemark(requirement.remark || '');
+    setAsking(false);
+    setAskNote('');
+    setReplyText('');
+    setComment('');
+    setAskBy(requirement.dev_assigned || (developers.some((d) => d.name === rememberedName) ? rememberedName : ''));
+    setReplyBy(requirement.requested_by || '');
+    setCommentBy(rememberedName || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requirement?.id, requirement?.dev_assigned, requirement?.target_version, requirement?.remark]);
+  }, [requirement?.id]);
+
+  useEffect(() => {
+    if (requirement) setDevAssigned(requirement.dev_assigned || '');
+  }, [requirement]);
 
   const refreshActivity = useCallback(async () => {
     if (!reqId) return;
     setActivity(await loadActivity(reqId));
   }, [reqId, loadActivity]);
 
-  // Reload the history when opening and after every status change.
+  // Reload the history when opening and after status / info changes.
   useEffect(() => {
     if (isOpen && reqId) void refreshActivity();
     if (!isOpen) setActivity([]);
-  }, [isOpen, reqId, reqStatus, refreshActivity]);
+  }, [isOpen, reqId, reqStatus, reqInfo, refreshActivity]);
 
   if (!isOpen || !requirement) return null;
 
   const coreMeta = CORE_FUNCTION_META[requirement.core_function];
+  const CoreIcon = CORE_ICON[requirement.core_function];
   const images = requirement.images;
+  const needsInfo = requirement.info_requested && requirement.status !== 'Done';
 
-  const handleStatusClick = async (newStatus: RequirementStatusType) => {
-    if (newStatus === requirement.status) return;
+  const handleStatusClick = async (next: RequirementStatusType) => {
+    if (next === requirement.status) return;
     try {
       setIsUpdatingStatus(true);
-      await onStatusChange(requirement.id, newStatus);
+      await onStatusChange(requirement.id, next);
     } catch (e) {
       alert('เปลี่ยนสถานะไม่สำเร็จ: ' + errText(e));
     } finally {
@@ -110,30 +176,63 @@ export default function RequirementDetailModal({
     }
   };
 
-  const handleQuickSave = async () => {
+  const handleSaveDev = async () => {
     try {
-      setIsSaving(true);
-      await onQuickUpdate(requirement.id, {
-        dev_assigned: devAssigned || null,
-        target_version: targetVersion.trim() || null,
-        remark: remark.trim() || null,
-      });
-      setSaveSuccess('บันทึกข้อมูลเรียบร้อยแล้ว');
-      setTimeout(() => setSaveSuccess(false), 2500);
+      setSavingDev(true);
+      await onAssignDev(requirement.id, devAssigned || null);
       void refreshActivity();
     } catch (e) {
-      alert('บันทึกไม่สำเร็จ: ' + errText(e));
+      alert('บันทึก Dev ไม่สำเร็จ: ' + errText(e));
     } finally {
-      setIsSaving(false);
+      setSavingDev(false);
+    }
+  };
+
+  const handleSendAsk = async () => {
+    if (!askNote.trim()) return;
+    if (!askBy) {
+      alert('กรุณาเลือกชื่อ Dev ที่ขอข้อมูล');
+      return;
+    }
+    try {
+      setBusyInfo(true);
+      await onRequestInfo(requirement.id, askNote.trim(), askBy);
+      setAsking(false);
+      setAskNote('');
+    } catch (e) {
+      alert('ส่งคำขอข้อมูลเพิ่มไม่สำเร็จ: ' + errText(e));
+    } finally {
+      setBusyInfo(false);
+    }
+  };
+
+  const handleReply = async () => {
+    if (!replyText.trim()) return;
+    if (!replyBy) {
+      alert('กรุณาเลือกชื่อผู้ให้ข้อมูล');
+      return;
+    }
+    try {
+      setBusyInfo(true);
+      await onReplyInfo(requirement.id, replyText.trim(), replyBy);
+      setReplyText('');
+    } catch (e) {
+      alert('บันทึกการให้ข้อมูลไม่สำเร็จ: ' + errText(e));
+    } finally {
+      setBusyInfo(false);
     }
   };
 
   const handleComment = async () => {
     const text = comment.trim();
     if (!text) return;
+    if (!commentBy) {
+      alert('กรุณาเลือกชื่อผู้แสดงความเห็น');
+      return;
+    }
     try {
       setIsCommenting(true);
-      await onAddComment(requirement.id, text);
+      await onAddComment(requirement.id, text, commentBy);
       setComment('');
       await refreshActivity();
     } catch (e) {
@@ -144,260 +243,298 @@ export default function RequirementDetailModal({
   };
 
   const describe = (a: ActivityEntry): string => {
-    if (a.action === 'status_change') return `เปลี่ยนสถานะ ${a.from_status} → ${a.to_status}`;
-    return a.message || (a.action === 'created' ? 'สร้าง Requirement' : 'แก้ไข Requirement');
+    switch (a.action) {
+      case 'status_change':
+        return `เปลี่ยนสถานะ ${a.from_status} → ${a.to_status}`;
+      case 'info_request':
+        return `ขอข้อมูลเพิ่ม: ${a.message}`;
+      case 'info_reply':
+        return `ให้ข้อมูลเพิ่ม: ${a.message}`;
+      default:
+        return a.message || (a.action === 'created' ? 'สร้าง Requirement' : 'แก้ไข Requirement');
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-xl max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden my-8 max-h-[92vh] flex flex-col">
-        {/* Modal Top Header */}
-        <div className="bg-jiffy-navy p-5 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-sm font-bold px-3 py-1 bg-white text-jiffy-navy rounded-xl shadow-card">
+      <div className="bg-white rounded-2xl max-w-4xl w-full border border-line shadow-pop overflow-hidden my-8 max-h-[92vh] flex flex-col">
+        {/* Header */}
+        <div
+          className="bg-gradient-to-r from-jiffy-navy to-[#0a5fc4] p-5 text-white flex items-center justify-between gap-3 shrink-0"
+          style={{ borderBottom: `4px solid ${coreMeta.accentHex}` }}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="font-mono text-sm font-bold px-3 py-1 bg-jiffy-yellow text-jiffy-ink rounded-lg shadow-card shrink-0">
               {requirement.req_id}
             </span>
-            <div>
-              <span className="text-xs font-semibold text-blue-100">
-                {requirement.type}
-              </span>
-              <h2 className="text-base sm:text-lg font-bold leading-tight line-clamp-1">
-                {requirement.title}
-              </h2>
+            <div className="min-w-0">
+              <span className="text-sm text-blue-100">{requirement.type}</span>
+              <h2 className="text-lg font-bold leading-tight line-clamp-2">{requirement.title}</h2>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => onEdit(requirement)}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
               title="แก้ไข Requirement"
+              aria-label="แก้ไข Requirement"
             >
               <Edit className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => onDelete(requirement.id)}
-              className="p-2 rounded-xl bg-white/10 hover:bg-red-500/80 text-white transition-colors"
+              className="p-2 rounded-lg bg-white/10 hover:bg-red-500/80 transition-colors"
               title="ลบ Requirement"
+              aria-label="ลบ Requirement"
             >
               <Trash2 className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
               title="ปิด"
+              aria-label="ปิด"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Status Pipeline Switcher */}
-        <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex flex-wrap items-center justify-between gap-2 shrink-0">
-          <div className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
-            <span>สถานะงาน (Workflow Status):</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
+        {/* Status pipeline */}
+        <div className="bg-slate-50 border-b border-line px-5 py-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-slate-600 mr-1">สถานะ:</span>
             {REQUIREMENT_STATUSES.map((st) => {
-              const isActive = requirement.status === st;
+              const meta = STATUS_META[st];
+              const Icon = meta.icon;
+              const active = requirement.status === st;
               return (
                 <button
                   key={st}
                   type="button"
                   disabled={isUpdatingStatus}
                   onClick={() => handleStatusClick(st)}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border ${
-                    isActive
-                      ? `${getStatusBadgeClass(st)} ring-2 ring-blue-400/50 shadow-card`
-                      : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200'
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                    active
+                      ? `${meta.badgeClass} ring-2 ring-offset-1 ring-jiffy-blue/40 shadow-card`
+                      : 'bg-white text-slate-500 border-line hover:border-slate-400 hover:text-slate-800'
                   }`}
                 >
-                  {st} ({getStatusShortTh(st)})
+                  <Icon className="w-4 h-4" aria-hidden />
+                  {meta.label}
+                  {active && <span className="text-xs font-normal opacity-80">· {meta.shortTh}</span>}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-6 space-y-5 overflow-y-auto flex-1 text-sm text-slate-700">
-          {/* Metadata Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-            {/* Core Function */}
-            <div>
-              <div className="text-xs font-bold text-slate-400 uppercase">Core Function</div>
-              <div className="mt-1">
-                <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border ${coreMeta.badgeBg} ${coreMeta.badgeText} ${coreMeta.badgeBorder}`}>
-                  {requirement.core_function}
+        {/* Body */}
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 text-sm text-slate-700">
+          {/* Dev is waiting for more information */}
+          {needsInfo && (
+            <div className="need-info-beacon rounded-xl border-2 p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <span className="h-9 w-9 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0">
+                  <CircleHelp className="w-5 h-5" aria-hidden />
                 </span>
+                <div className="min-w-0">
+                  <div className="font-bold text-orange-900">
+                    {requirement.info_requested_by || 'Dev'} ขอข้อมูลเพิ่มจาก {requirement.requested_by}
+                  </div>
+                  <div className="text-xs text-orange-800/80">{formatDateTime(requirement.info_requested_at)}</div>
+                  <p className="mt-1.5 whitespace-pre-wrap text-orange-950">{requirement.info_request_note}</p>
+                </div>
+              </div>
+              <div className="rounded-lg bg-white/80 border border-orange-200 p-3 space-y-2">
+                <label className="text-sm font-semibold text-orange-900 block">
+                  ผู้เปิด Requirement ตอบกลับ / ให้ข้อมูลเพิ่ม
+                </label>
+                <textarea
+                  rows={2}
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="พิมพ์ข้อมูลที่ Dev ต้องการ (แนบรูปได้โดยกดแก้ไข Requirement)"
+                  className="field"
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <select value={replyBy} onChange={(e) => setReplyBy(e.target.value)} className="field !w-auto font-semibold" aria-label="ผู้ให้ข้อมูล">
+                    <option value="">-- ผู้ให้ข้อมูล --</option>
+                    {everyone.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" disabled={busyInfo || !replyText.trim()} onClick={handleReply} className="btn-primary">
+                    <CheckCheck className="w-4 h-4" aria-hidden />
+                    ให้ข้อมูลแล้ว (ปิดคำขอ)
+                  </button>
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Module */}
-            <div>
-              <div className="text-xs font-bold text-slate-400 uppercase">Module</div>
-              <div className="text-xs font-bold text-slate-800 mt-1 flex items-center gap-1">
-                <Layers className="w-3.5 h-3.5 text-slate-500" />
+          {/* Meta */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="rounded-xl border p-3" style={{ borderColor: `${coreMeta.accentHex}55`, backgroundColor: `${coreMeta.accentHex}0d` }}>
+              <div className="text-xs font-semibold text-slate-500">Core Function</div>
+              <div className="mt-1 inline-flex items-center gap-2 font-bold" style={{ color: coreMeta.accentHex }}>
+                <CoreIcon className="w-5 h-5" aria-hidden />
+                {requirement.core_function}
+              </div>
+            </div>
+            <div className="rounded-xl border border-line bg-white p-3">
+              <div className="text-xs font-semibold text-slate-500">Module</div>
+              <div className="mt-1 inline-flex items-center gap-2 font-bold text-slate-800">
+                <Layers className="w-4 h-4 text-slate-500" aria-hidden />
                 {requirement.module}
               </div>
             </div>
-
-            {/* Priority */}
-            <div>
-              <div className="text-xs font-bold text-slate-400 uppercase">Priority</div>
+            <div className="rounded-xl border border-line bg-white p-3">
+              <div className="text-xs font-semibold text-slate-500">Priority</div>
               <div className="mt-1">
-                <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border ${
-                  requirement.priority.includes('High')
-                    ? 'bg-red-50 text-red-700 border-red-200'
-                    : requirement.priority.includes('Medium')
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                    : 'bg-blue-50 text-blue-700 border-blue-200'
-                }`}>
-                  {requirement.priority}
-                </span>
+                <PriorityBadge priority={requirement.priority} />
               </div>
             </div>
-
-            {/* Requested By */}
-            <div>
-              <div className="text-xs font-bold text-slate-400 uppercase">ผู้ขอ / วันที่ขอ</div>
-              <div className="text-xs font-bold text-slate-800 mt-1">
-                {requirement.requested_by || 'Unknown'}
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+              <div className="text-xs font-semibold text-amber-800">ผู้ขอ / เปิดเมื่อ</div>
+              <div className="mt-1 font-bold text-slate-800 inline-flex items-center gap-1.5">
+                <UserRound className="w-4 h-4 text-amber-600" aria-hidden />
+                {requirement.requested_by || '-'}
               </div>
-              <div className="text-xs text-slate-500">
-                {requirement.request_date
-                  ? new Date(requirement.request_date).toLocaleDateString('th-TH')
-                  : '-'}
+              <div className="text-xs text-slate-600 inline-flex items-center gap-1 mt-0.5">
+                <CalendarClock className="w-3.5 h-3.5" aria-hidden />
+                {formatDateTime(requirement.request_date)}
               </div>
             </div>
           </div>
 
-          {/* Details / User Story Section */}
-          <div className="space-y-1.5">
-            <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-jiffy-blue" />
+          {/* Details */}
+          <div className="space-y-2">
+            <SectionTitle icon={FileText} tone="bg-gradient-to-br from-sky-400 to-blue-600">
               รายละเอียดความต้องการ / User Story / Acceptance Criteria
-            </h4>
-            <div className="p-4 bg-white border border-slate-200 rounded-xl whitespace-pre-wrap leading-relaxed text-slate-800 text-xs">
+            </SectionTitle>
+            <div className="p-4 bg-white border border-line rounded-xl whitespace-pre-wrap leading-relaxed text-slate-800">
               {requirement.details || 'ไม่มีรายละเอียดเพิ่มเติม'}
             </div>
           </div>
 
-          {/* Dev Assignment & Version Control Panel */}
-          <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-100 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="font-bold text-jiffy-navy text-xs flex items-center gap-1.5">
-                <Code2 className="w-4 h-4 text-jiffy-blue" />
-                ข้อมูลการพัฒนา (Development & Release Info)
-              </h4>
-              {saveSuccess && (
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  {saveSuccess}
-                </span>
+          {/* Dev + request info */}
+          <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-200 space-y-3">
+            <SectionTitle icon={Code2} tone="bg-gradient-to-br from-indigo-400 to-violet-600">
+              Dev ผู้รับผิดชอบ
+            </SectionTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <select value={devAssigned} onChange={(e) => setDevAssigned(e.target.value)} className="field !w-auto min-w-[200px] font-semibold" aria-label="Dev ผู้รับผิดชอบ">
+                <option value="">-- ยังไม่มอบหมาย Dev --</option>
+                {devAssigned && !developers.some((d) => d.name === devAssigned) && <option value={devAssigned}>{devAssigned}</option>}
+                {developers.map((d) => (
+                  <option key={d.id} value={d.name}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={savingDev || devAssigned === (requirement.dev_assigned || '')}
+                onClick={handleSaveDev}
+                className="btn-brand"
+              >
+                {savingDev ? 'กำลังบันทึก...' : 'บันทึก Dev'}
+              </button>
+              <span className="flex-1" />
+              {!needsInfo && !asking && (
+                <button type="button" onClick={() => setAsking(true)} className="btn bg-orange-500 text-white hover:bg-orange-600 shadow-card">
+                  <CircleHelp className="w-4 h-4" aria-hidden />
+                  ขอข้อมูลเพิ่ม
+                </button>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Dev ผู้รับผิดชอบ (Dev Assigned)
+            {asking && (
+              <div className="rounded-lg bg-white border border-orange-300 p-3 space-y-2">
+                <label className="text-sm font-semibold text-orange-900 block">
+                  ข้อมูลที่ต้องการจาก {requirement.requested_by} (ผู้เปิด Requirement)
                 </label>
-                <select
-                  value={devAssigned}
-                  onChange={(e) => setDevAssigned(e.target.value)}
-                  className="field font-semibold"
-                >
-                  <option value="">-- ยังไม่มอบหมาย Dev --</option>
-                  {team.map((tm) => (
-                    <option key={tm.id} value={tm.name}>
-                      {tm.name} {tm.role ? `(${tm.role})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Target Version / Sprint
-                </label>
-                <input
-                  type="text"
-                  value={targetVersion}
-                  onChange={(e) => setTargetVersion(e.target.value)}
-                  placeholder="เช่น v1.2.0, Sprint 4"
-                  className="field font-mono"
+                <textarea
+                  rows={3}
+                  autoFocus
+                  value={askNote}
+                  onChange={(e) => setAskNote(e.target.value)}
+                  placeholder="ระบุสิ่งที่ต้องการให้ผู้เปิด Requirement ชี้แจงหรือส่งเพิ่ม เช่น ตัวอย่างหน้าจอ เงื่อนไขการคำนวณ"
+                  className="field"
                 />
+                <div className="flex flex-wrap items-center gap-2">
+                  <select value={askBy} onChange={(e) => setAskBy(e.target.value)} className="field !w-auto font-semibold" aria-label="Dev ที่ขอข้อมูล">
+                    <option value="">-- Dev ที่ขอข้อมูล --</option>
+                    {developers.map((d) => (
+                      <option key={d.id} value={d.name}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" disabled={busyInfo || !askNote.trim()} onClick={handleSendAsk} className="btn bg-orange-500 text-white hover:bg-orange-600">
+                    <Send className="w-4 h-4" aria-hidden />
+                    ส่งคำขอ
+                  </button>
+                  <button type="button" onClick={() => setAsking(false)} className="btn-secondary">
+                    ยกเลิก
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500">เมื่อส่งแล้ว หน้าหลักจะแสดงป้าย &quot;ขอข้อมูลเพิ่ม&quot; แบบกะพริบจนกว่าผู้เปิด Requirement จะให้ข้อมูล</p>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                หมายเหตุเพิ่มเติม / Dev Notes (Remark)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={remark}
-                  onChange={(e) => setRemark(e.target.value)}
-                  placeholder="เช่น สรุปผลการทดสอบ, จุดที่ต้องระวัง, หรือสถานะการส่งมอบ..."
-                  className="field flex-1"
-                />
-                <button
-                  type="button"
-                  disabled={isSaving}
-                  onClick={handleQuickSave}
-                  className="btn-brand shrink-0"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Attached Wireframes / Images */}
+          {/* Files from developers (Google Drive) */}
+          <DriveFilesPanel
+            files={requirement.files}
+            uploaders={developers.map((d) => d.name)}
+            defaultUploader={requirement.dev_assigned || (developers.some((d) => d.name === rememberedName) ? rememberedName : '')}
+            onAdd={(file) => onAddFile(requirement.id, file)}
+            onDelete={onDeleteFile}
+          />
+
+          {/* Wireframes */}
           {images.length > 0 && (
             <div className="space-y-2">
-              <h4 className="font-bold text-slate-900 text-xs">
+              <SectionTitle icon={Images} tone="bg-gradient-to-br from-fuchsia-400 to-violet-600">
                 รูปภาพ Wireframe / Mockup ({images.length} รูป)
-              </h4>
+              </SectionTitle>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {images.map((img, idx) => (
-                  <div
+                  <button
                     key={img.id || idx}
+                    type="button"
                     onClick={() => {
                       setActiveImageIndex(idx);
                       setLightboxOpen(true);
                     }}
-                    className="group relative aspect-video rounded-xl border border-slate-200 overflow-hidden bg-slate-100 cursor-pointer hover:border-[#0086FF] transition-all"
+                    className="group relative aspect-video rounded-xl border border-line overflow-hidden bg-slate-100 hover:border-jiffy-blue transition-all"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img.file_url}
-                      alt={img.file_name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
-                      <ZoomIn className="w-4 h-4" />
-                      คลิกดูภาพขยาย
-                    </div>
-                  </div>
+                    <img src={img.file_url} alt={img.file_name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <span className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-sm font-semibold gap-1">
+                      <ZoomIn className="w-4 h-4" aria-hidden />
+                      ดูภาพขยาย
+                    </span>
+                  </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Activity history & comments */}
-          <div className="space-y-2.5">
-            <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-              <History className="w-4 h-4 text-jiffy-blue" />
+          {/* Activity */}
+          <div className="space-y-3">
+            <SectionTitle icon={History} tone="bg-gradient-to-br from-amber-400 to-orange-500">
               ประวัติการดำเนินงาน &amp; ความเห็น ({activity.length})
-            </h4>
-            <div className="flex gap-2">
+            </SectionTitle>
+            <div className="flex flex-wrap gap-2">
               <input
                 type="text"
                 value={comment}
@@ -408,65 +545,56 @@ export default function RequirementDetailModal({
                     void handleComment();
                   }
                 }}
-                placeholder="เพิ่มความเห็น / อัปเดตความคืบหน้า..."
-                className="field flex-1 focus:ring-2 focus:ring-jiffy-blue"
+                placeholder="เพิ่มความเห็น / อัปเดตความคืบหน้า"
+                aria-label="ความเห็น"
+                className="field flex-1 min-w-[220px]"
               />
-              <button
-                type="button"
-                disabled={isCommenting || !comment.trim()}
-                onClick={handleComment}
-                className="btn-brand shrink-0"
-              >
-                <Send className="w-3.5 h-3.5" />
+              <select value={commentBy} onChange={(e) => setCommentBy(e.target.value)} className="field !w-auto font-semibold" aria-label="ผู้แสดงความเห็น">
+                <option value="">-- ชื่อผู้ส่ง --</option>
+                {everyone.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              <button type="button" disabled={isCommenting || !comment.trim()} onClick={handleComment} className="btn-brand">
+                <Send className="w-4 h-4" aria-hidden />
                 ส่ง
               </button>
             </div>
             {activity.length === 0 ? (
-              <p className="text-xs text-slate-400 py-1">ยังไม่มีประวัติ</p>
+              <p className="text-sm text-slate-400">ยังไม่มีประวัติ</p>
             ) : (
-              <ol className="space-y-2 border-l-2 border-slate-200 ml-1.5 pl-4">
-                {activity.map((a) => (
-                  <li key={a.id} className="relative">
-                    <span
-                      className={`absolute -left-[22px] top-1 w-2.5 h-2.5 rounded-full ring-2 ring-white ${
-                        a.action === 'comment'
-                          ? 'bg-amber-400'
-                          : a.action === 'status_change'
-                          ? 'bg-emerald-500'
-                          : 'bg-slate-400'
-                      }`}
-                    />
-                    <div className="text-xs text-slate-500">
-                      <b className="text-slate-700">{a.actor}</b> •{' '}
-                      {new Date(a.created_at).toLocaleString('th-TH')}
-                    </div>
-                    <div className="text-xs text-slate-800 whitespace-pre-wrap flex items-start gap-1">
-                      {a.action === 'comment' && <MessageSquare className="w-3 h-3 mt-0.5 text-amber-500 shrink-0" />}
-                      {describe(a)}
-                    </div>
-                  </li>
-                ))}
+              <ol className="space-y-3 border-l-2 border-slate-200 ml-3 pl-5">
+                {activity.map((a) => {
+                  const style = ACTIVITY_STYLE[a.action] ?? ACTIVITY_STYLE.update;
+                  const Icon = style.icon;
+                  return (
+                    <li key={a.id} className="relative">
+                      <span className={`absolute -left-[33px] top-0.5 h-6 w-6 rounded-full ring-4 ring-white flex items-center justify-center text-white ${style.dot}`}>
+                        <Icon className="w-3.5 h-3.5" aria-hidden />
+                      </span>
+                      <div className="text-xs text-slate-500">
+                        <b className="text-slate-700">{a.actor}</b> · {formatDateTime(a.created_at)}
+                      </div>
+                      <div className="text-sm text-slate-800 whitespace-pre-wrap">{describe(a)}</div>
+                    </li>
+                  );
+                })}
               </ol>
             )}
           </div>
         </div>
 
-        {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
-          <div className="text-xs text-slate-500">
-            สร้างเมื่อ: {requirement.created_at ? new Date(requirement.created_at).toLocaleString('th-TH') : '-'}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs transition-colors"
-          >
+        {/* Footer */}
+        <div className="px-5 py-3 bg-slate-50 border-t border-line flex items-center justify-between shrink-0">
+          <div className="text-xs text-slate-500">สร้างเมื่อ {formatDateTime(requirement.created_at)}</div>
+          <button type="button" onClick={onClose} className="btn-secondary">
             ปิดหน้าต่าง
           </button>
         </div>
       </div>
 
-      {/* Lightbox for zooming attached wireframe images */}
       {lightboxOpen && (
         <LightboxModal
           isOpen={lightboxOpen}

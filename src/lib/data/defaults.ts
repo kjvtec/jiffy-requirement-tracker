@@ -1,7 +1,9 @@
 import {
   CORE_FUNCTIONS,
+  DEFAULT_DEVELOPERS,
   DEFAULT_MODULES_BY_CORE,
   DEFAULT_TEAM,
+  type Developer,
   type SystemModule,
   type TeamMember,
 } from '@/types';
@@ -18,4 +20,9 @@ export const DEFAULT_MODULES: SystemModule[] = CORE_FUNCTIONS.flatMap((core, cor
 export const DEFAULT_TEAM_MEMBERS: TeamMember[] = DEFAULT_TEAM.map((m, i) => ({
   id: i + 1,
   ...m,
+}));
+
+export const DEFAULT_DEVELOPER_LIST: Developer[] = DEFAULT_DEVELOPERS.map((name, i) => ({
+  id: i + 1,
+  name,
 }));

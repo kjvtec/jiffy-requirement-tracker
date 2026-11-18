@@ -66,6 +66,15 @@ function formatDateTh(dateStr?: string | null): string {
   return d.toLocaleDateString('en-GB');
 }
 
+function formatDateTimeTh(dateStr?: string | null): string {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return String(dateStr);
+  const date = d.toLocaleDateString('en-GB');
+  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${date} ${time}`;
+}
+
 function estimateRowHeight(text: string | null | undefined, charsPerLine: number, minHeight = 22): number {
   if (!text) return minHeight;
   const paragraphs = String(text).split(/\r?\n/);
@@ -200,16 +209,13 @@ function convertImageToPngViaCanvas(blob: Blob): Promise<{ bytes: Uint8Array; wi
 
 function getStatusColors(status: string): { bg: string; text: string; tab: string } {
   switch (status) {
-    case 'Draft':
-      return { bg: 'FFF1F5F9', text: 'FF475569', tab: 'FF94A3B8' };
-    case 'In Review':
-      return { bg: 'FFFEF3C7', text: 'FF92400E', tab: 'FFF59E0B' };
+    case 'New':
+      return { bg: 'FFE0F2FE', text: 'FF0369A1', tab: 'FF0EA5E9' };
     case 'In Development':
       return { bg: 'FFE0E7FF', text: 'FF3730A3', tab: 'FF6366F1' };
     case 'Testing':
-      return { bg: 'FFE0F2FE', text: 'FF0369A1', tab: 'FF0EA5E9' };
+      return { bg: 'FFFEF3C7', text: 'FF92400E', tab: 'FFF59E0B' };
     case 'Done':
-    case 'Closed':
       return { bg: 'FFD1FAE5', text: 'FF065F46', tab: 'FF10B981' };
     default:
       return { bg: 'FFF8FAFC', text: 'FF334155', tab: 'FF64748B' };
@@ -322,12 +328,12 @@ export async function exportRequirementsToExcel(
     { width: 18 }, // G: Type
     { width: 16 }, // H: Status
     { width: 18 }, // I: Dev ผู้รับผิดชอบ
-    { width: 14 }, // J: Target Ver.
-    { width: 16 }, // K: ผู้ขอ
-    { width: 14 }, // L: วันที่ขอ
-    { width: 45 }, // M: รายละเอียด
-    { width: 30 }, // N: หมายเหตุ
-    { width: 10 }, // O: รูปภาพ
+    { width: 16 }, // J: ผู้ขอ
+    { width: 18 }, // K: วันที่-เวลาที่เปิด
+    { width: 45 }, // L: รายละเอียด
+    { width: 34 }, // M: ขอข้อมูลเพิ่ม
+    { width: 10 }, // N: รูปภาพ
+    { width: 12 }, // O: ไฟล์ Drive
     { width: 14 }, // P: เปิดหน้าชีท
   ];
 
@@ -346,14 +352,13 @@ export async function exportRequirementsToExcel(
   indexSheet.mergeCells('A3:C3');
   indexSheet.getCell('A3').value = 'สถิติแยกตาม Core Function';
   indexSheet.getCell('D3').value = 'ทั้งหมด';
-  indexSheet.getCell('E3').value = 'Draft';
-  indexSheet.getCell('F3').value = 'In Review';
-  indexSheet.getCell('G3').value = 'In Dev';
-  indexSheet.getCell('H3').value = 'Testing';
-  indexSheet.getCell('I3').value = 'Done';
-  indexSheet.getCell('J3').value = 'ความคืบหน้า (%)';
+  indexSheet.getCell('E3').value = 'New';
+  indexSheet.getCell('F3').value = 'In Dev';
+  indexSheet.getCell('G3').value = 'Testing';
+  indexSheet.getCell('H3').value = 'Done';
+  indexSheet.getCell('I3').value = 'ความคืบหน้า (%)';
 
-  const sumCols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+  const sumCols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
   sumCols.forEach((col) => {
     const c = indexSheet.getCell(`${col}3`);
     c.font = { name: 'Tahoma', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -367,8 +372,7 @@ export async function exportRequirementsToExcel(
     const rowIdx = 4 + idx;
     const cReqs = sortedReqs.filter((r) => (r.core_function || DEFAULT_CORE_FUNCTION) === cf);
     const total = cReqs.length;
-    const draft = cReqs.filter((r) => r.status === 'Draft').length;
-    const inReview = cReqs.filter((r) => r.status === 'In Review').length;
+    const isNew = cReqs.filter((r) => r.status === 'New').length;
     const inDev = cReqs.filter((r) => r.status === 'In Development').length;
     const testing = cReqs.filter((r) => r.status === 'Testing').length;
     const done = cReqs.filter((r) => r.status === 'Done').length;
@@ -377,16 +381,15 @@ export async function exportRequirementsToExcel(
     indexSheet.mergeCells(`A${rowIdx}:C${rowIdx}`);
     indexSheet.getCell(`A${rowIdx}`).value = cf;
     indexSheet.getCell(`D${rowIdx}`).value = total;
-    indexSheet.getCell(`E${rowIdx}`).value = draft;
-    indexSheet.getCell(`F${rowIdx}`).value = inReview;
-    indexSheet.getCell(`G${rowIdx}`).value = inDev;
-    indexSheet.getCell(`H${rowIdx}`).value = testing;
-    indexSheet.getCell(`I${rowIdx}`).value = done;
-    indexSheet.getCell(`J${rowIdx}`).value = `${pct}%`;
+    indexSheet.getCell(`E${rowIdx}`).value = isNew;
+    indexSheet.getCell(`F${rowIdx}`).value = inDev;
+    indexSheet.getCell(`G${rowIdx}`).value = testing;
+    indexSheet.getCell(`H${rowIdx}`).value = done;
+    indexSheet.getCell(`I${rowIdx}`).value = `${pct}%`;
 
     sumCols.forEach((col) => {
       const cell = indexSheet.getCell(`${col}${rowIdx}`);
-      cell.font = { name: 'Tahoma', size: 9, bold: col === 'A' || col === 'D' || col === 'J' };
+      cell.font = { name: 'Tahoma', size: 9, bold: col === 'A' || col === 'D' || col === 'I' };
       cell.alignment = { vertical: 'middle', horizontal: col === 'A' ? 'left' : 'center' };
     });
     indexSheet.getRow(rowIdx).height = 20;
@@ -395,8 +398,7 @@ export async function exportRequirementsToExcel(
   // Grand Total row (Row 9)
   const totalRowIdx = 9;
   const totTotal = sortedReqs.length;
-  const totDraft = sortedReqs.filter((r) => r.status === 'Draft').length;
-  const totInReview = sortedReqs.filter((r) => r.status === 'In Review').length;
+  const totNew = sortedReqs.filter((r) => r.status === 'New').length;
   const totInDev = sortedReqs.filter((r) => r.status === 'In Development').length;
   const totTesting = sortedReqs.filter((r) => r.status === 'Testing').length;
   const totDone = sortedReqs.filter((r) => r.status === 'Done').length;
@@ -405,12 +407,11 @@ export async function exportRequirementsToExcel(
   indexSheet.mergeCells(`A${totalRowIdx}:C${totalRowIdx}`);
   indexSheet.getCell(`A${totalRowIdx}`).value = 'รวมทั้งหมด (Grand Total)';
   indexSheet.getCell(`D${totalRowIdx}`).value = totTotal;
-  indexSheet.getCell(`E${totalRowIdx}`).value = totDraft;
-  indexSheet.getCell(`F${totalRowIdx}`).value = totInReview;
-  indexSheet.getCell(`G${totalRowIdx}`).value = totInDev;
-  indexSheet.getCell(`H${totalRowIdx}`).value = totTesting;
-  indexSheet.getCell(`I${totalRowIdx}`).value = totDone;
-  indexSheet.getCell(`J${totalRowIdx}`).value = `${totPct}%`;
+  indexSheet.getCell(`E${totalRowIdx}`).value = totNew;
+  indexSheet.getCell(`F${totalRowIdx}`).value = totInDev;
+  indexSheet.getCell(`G${totalRowIdx}`).value = totTesting;
+  indexSheet.getCell(`H${totalRowIdx}`).value = totDone;
+  indexSheet.getCell(`I${totalRowIdx}`).value = `${totPct}%`;
 
   sumCols.forEach((col) => {
     const cell = indexSheet.getCell(`${col}${totalRowIdx}`);
@@ -433,12 +434,12 @@ export async function exportRequirementsToExcel(
     'Type',
     'สถานะ (Status)',
     'Dev ผู้รับผิดชอบ',
-    'Target Version',
     'ผู้ขอ (Requested By)',
-    'วันที่ขอ',
+    'วันที่-เวลาที่เปิด',
     'รายละเอียดความต้องการ',
-    'หมายเหตุ (Remark)',
+    'ขอข้อมูลเพิ่ม',
     'รูปภาพ',
+    'ไฟล์ Drive',
     'เปิดหน้าชีท',
   ];
 
@@ -473,12 +474,15 @@ export async function exportRequirementsToExcel(
     row.getCell(7).value = r.type || 'New Feature';
     row.getCell(8).value = r.status;
     row.getCell(9).value = r.dev_assigned || '-';
-    row.getCell(10).value = r.target_version || '-';
-    row.getCell(11).value = r.requested_by || '-';
-    row.getCell(12).value = formatDateTh(r.request_date);
-    row.getCell(13).value = r.details;
-    row.getCell(14).value = r.remark || '-';
-    row.getCell(15).value = r.images?.length || 0;
+    row.getCell(10).value = r.requested_by || '-';
+    row.getCell(11).value = formatDateTimeTh(r.request_date);
+    row.getCell(12).value = r.details;
+    row.getCell(13).value =
+      r.info_requested && r.status !== 'Done'
+        ? `${r.info_requested_by || 'Dev'}: ${r.info_request_note || ''}`
+        : '-';
+    row.getCell(14).value = r.images?.length || 0;
+    row.getCell(15).value = r.files?.length || 0;
     row.getCell(16).value = {
       formula: `HYPERLINK("#'${sheetName}'!A1","เปิดชีท →")`,
       result: 'เปิดชีท →',
@@ -554,10 +558,21 @@ export async function exportRequirementsToExcel(
       { label: 'ประเภท (Type)', value: r.type || 'New Feature' },
       { label: 'สถานะงาน (Status)', value: r.status, highlight: statusStyle },
       { label: 'Dev ผู้รับผิดชอบ (Dev Assigned)', value: r.dev_assigned || '-' },
-      { label: 'Target Version / Sprint', value: r.target_version || '-' },
-      { label: 'ผู้ขอ (Requested By)', value: `${r.requested_by || '-'} (${formatDateTh(r.request_date)})` },
+      { label: 'ผู้ขอ (Requested By)', value: `${r.requested_by || '-'} (${formatDateTimeTh(r.request_date)})` },
       { label: 'รายละเอียดความต้องการ / Acceptance Criteria', value: r.details || '-', multiline: true },
-      { label: 'หมายเหตุเพิ่มเติม / Dev Notes', value: r.remark || '-', multiline: true },
+      {
+        label: 'ขอข้อมูลเพิ่ม (Dev → ผู้ขอ)',
+        value:
+          r.info_requested && r.status !== 'Done'
+            ? `${r.info_requested_by || 'Dev'} (${formatDateTimeTh(r.info_requested_at)}): ${r.info_request_note || ''}`
+            : '-',
+        multiline: true,
+      },
+      {
+        label: 'ไฟล์แนบจาก Dev (Google Drive)',
+        value: r.files?.length ? r.files.map((f) => `${f.file_name}  ${f.web_view_link}`).join('\n') : '-',
+        multiline: true,
+      },
     ];
 
     let currentRow = 4;

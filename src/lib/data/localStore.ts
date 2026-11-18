@@ -1,24 +1,26 @@
 import type {
   ActivityEntry,
+  Developer,
   Requirement,
   RequirementImage,
   SystemModule,
   TeamMember,
 } from '@/types';
-import { DEFAULT_MODULES, DEFAULT_TEAM_MEMBERS } from './defaults';
+import { DEFAULT_DEVELOPER_LIST, DEFAULT_MODULES, DEFAULT_TEAM_MEMBERS } from './defaults';
 import type { DataStore, TrackerSnapshot } from './store';
 
 /**
  * Browser-only demo store. Used when Supabase env vars are not configured so
  * the app is still fully usable (data lives in this browser's localStorage).
  */
-const STORAGE_KEY = 'jiffy_requirement_demo_v1';
+const STORAGE_KEY = 'jiffy_requirement_demo_v2';
 
 interface LocalState {
   seq: number;
   requirements: Requirement[];
   modules: SystemModule[];
   team: TeamMember[];
+  developers: Developer[];
   activity: ActivityEntry[];
 }
 
@@ -29,11 +31,22 @@ const uid = () =>
 
 function seedState(): LocalState {
   const now = new Date().toISOString();
-  const base = { request_date: now, created_at: now, updated_at: now, images: [] as RequirementImage[] };
+  const base = {
+    request_date: now,
+    created_at: now,
+    updated_at: now,
+    images: [] as RequirementImage[],
+    files: [],
+    info_requested: false,
+    info_request_note: null,
+    info_requested_by: null,
+    info_requested_at: null,
+  };
   return {
     seq: 2,
     modules: DEFAULT_MODULES,
     team: DEFAULT_TEAM_MEMBERS,
+    developers: DEFAULT_DEVELOPER_LIST,
     activity: [],
     requirements: [
       {
@@ -50,8 +63,6 @@ function seedState(): LocalState {
         requested_by: 'Nat',
         status: 'In Development',
         dev_assigned: 'Kampon',
-        target_version: 'v1.2.0',
-        remark: 'ทดสอบ Logic การตัด Prefix บาร์โค้ดและทดสอบกับเครื่องสแกนหน้าร้าน',
       },
       {
         ...base,
@@ -65,10 +76,12 @@ function seedState(): LocalState {
         details:
           'เพิ่มปุ่ม Copy เลขที่ใบโอน/เลขที่ PO บนหน้ารายงานสต็อก เพื่อให้พนักงานสาขาคัดลอกไปค้นหาต่อในหน้า Stock Adjustment ได้สะดวกขึ้นโดยไม่ต้องพิมพ์เอง',
         requested_by: 'Tukta',
-        status: 'Draft',
+        status: 'New',
         dev_assigned: null,
-        target_version: 'v1.3.0',
-        remark: 'อยู่ระหว่างสรุป UI กับทีมสาขา',
+        info_requested: true,
+        info_request_note: 'ขอตัวอย่างหน้ารายงานที่ต้องการเพิ่มปุ่ม และระบุว่าต้องคัดลอกเลขที่เอกสารรูปแบบใดบ้าง',
+        info_requested_by: 'Kampon',
+        info_requested_at: now,
       },
     ],
   };
@@ -102,11 +115,14 @@ function mutate(fn: (s: LocalState) => void): void {
   write(state);
 }
 
-function log(
-  state: LocalState,
-  entry: Omit<ActivityEntry, 'id' | 'created_at'>
-): void {
+function log(state: LocalState, entry: Omit<ActivityEntry, 'id' | 'created_at'>): void {
   state.activity.push({ ...entry, id: uid(), created_at: new Date().toISOString() });
+}
+
+function patchRequirement(s: LocalState, id: string, patch: Partial<Requirement>): void {
+  s.requirements = s.requirements.map((r) =>
+    r.id === id ? { ...r, ...patch, updated_at: new Date().toISOString() } : r
+  );
 }
 
 export const localStore: DataStore = {
@@ -114,11 +130,11 @@ export const localStore: DataStore = {
 
   async load(): Promise<TrackerSnapshot> {
     const s = read();
-    return { requirements: s.requirements, modules: s.modules, team: s.team };
+    return { requirements: s.requirements, modules: s.modules, team: s.team, developers: s.developers };
   },
 
   async loadRequirements() {
-    return read().requirements;
+    return { requirements: read().requirements };
   },
 
   async createRequirement(input, images, actor) {
@@ -133,6 +149,11 @@ export const localStore: DataStore = {
         created_at: now,
         updated_at: now,
         images: images.map((i) => ({ ...i, id: i.id || uid() })),
+        files: [],
+        info_requested: false,
+        info_request_note: null,
+        info_requested_by: null,
+        info_requested_at: null,
       };
       s.requirements.unshift(created);
       log(s, {
@@ -148,25 +169,17 @@ export const localStore: DataStore = {
 
   async updateRequirement(id, patch, images, actor) {
     mutate((s) => {
-      s.requirements = s.requirements.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              ...patch,
-              images: images ? images.map((i) => ({ ...i, id: i.id || uid() })) : r.images,
-              updated_at: new Date().toISOString(),
-            }
-          : r
-      );
+      patchRequirement(s, id, {
+        ...patch,
+        ...(images ? { images: images.map((i) => ({ ...i, id: i.id || uid() })) } : {}),
+      });
       log(s, { requirement_id: id, actor, action: 'update', message: 'แก้ไขรายละเอียด Requirement' });
     });
   },
 
   async changeStatus(id, from, to, actor) {
     mutate((s) => {
-      s.requirements = s.requirements.map((r) =>
-        r.id === id ? { ...r, status: to, updated_at: new Date().toISOString() } : r
-      );
+      patchRequirement(s, id, { status: to });
       log(s, { requirement_id: id, actor, action: 'status_change', from_status: from, to_status: to });
     });
   },
@@ -175,6 +188,41 @@ export const localStore: DataStore = {
     mutate((s) => {
       s.requirements = s.requirements.filter((r) => r.id !== id);
       s.activity = s.activity.filter((a) => a.requirement_id !== id);
+    });
+  },
+
+  async requestInfo(id, note, askedBy) {
+    mutate((s) => {
+      patchRequirement(s, id, {
+        info_requested: true,
+        info_request_note: note,
+        info_requested_by: askedBy,
+        info_requested_at: new Date().toISOString(),
+      });
+      log(s, { requirement_id: id, actor: askedBy, action: 'info_request', message: note });
+    });
+  },
+
+  async replyInfo(id, message, repliedBy) {
+    mutate((s) => {
+      patchRequirement(s, id, { info_requested: false });
+      log(s, { requirement_id: id, actor: repliedBy, action: 'info_reply', message });
+    });
+  },
+
+  async addFile(requirementId, file, actor) {
+    mutate((s) => {
+      const entry = { ...file, id: uid(), requirement_id: requirementId, created_at: new Date().toISOString() };
+      s.requirements = s.requirements.map((r) =>
+        r.id === requirementId ? { ...r, files: [...r.files, entry] } : r
+      );
+      log(s, { requirement_id: requirementId, actor, action: 'file', message: `แนบไฟล์ ${file.file_name}` });
+    });
+  },
+
+  async deleteFile(fileId) {
+    mutate((s) => {
+      s.requirements = s.requirements.map((r) => ({ ...r, files: r.files.filter((f) => f.id !== fileId) }));
     });
   },
 
@@ -220,9 +268,18 @@ export const localStore: DataStore = {
   async addTeamMember(name, role) {
     mutate((s) => {
       if (s.team.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
-        throw new Error('มีชื่อนี้อยู่ในทีมแล้ว');
+        throw new Error('มีชื่อนี้อยู่ในรายชื่อผู้ขอแล้ว');
       }
       s.team.push({ id: Date.now(), name, role: role || null });
+    });
+  },
+
+  async addDeveloper(name) {
+    mutate((s) => {
+      if (s.developers.some((d) => d.name.toLowerCase() === name.toLowerCase())) {
+        throw new Error('มี Dev ชื่อนี้อยู่แล้ว');
+      }
+      s.developers.push({ id: Date.now(), name });
     });
   },
 };

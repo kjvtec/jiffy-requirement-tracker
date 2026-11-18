@@ -70,6 +70,25 @@ pre,
   }
 }
 
+/* A developer is waiting for more information: orange blinking attention effect */
+@keyframes needInfoBeacon {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4), 0 0 8px rgba(249, 115, 22, 0.18);
+    border-color: rgba(249, 115, 22, 0.75);
+    background-color: rgba(255, 247, 237, 0.95);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(249, 115, 22, 0), 0 0 20px rgba(249, 115, 22, 0.5);
+    border-color: rgba(234, 88, 12, 1);
+    background-color: rgba(255, 237, 213, 1);
+  }
+}
+
+.need-info-beacon {
+  animation: needInfoBeacon 1.3s ease-in-out infinite;
+}
+
 /* SIT countdown bar: flowing gradient + light sweep + glowing head */
 @keyframes sitGradientFlow {
   0% {

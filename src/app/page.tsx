@@ -9,9 +9,8 @@ import {
   type CoreFunctionType,
   type Requirement,
   type RequirementFilter,
-  type RequirementInput,
   type RequirementImage,
-  type RequirementStatusType,
+  type RequirementInput,
 } from '@/types';
 import { useTracker } from '@/hooks/useTracker';
 import AppHeader, { type ActiveTab } from '@/components/AppHeader';
@@ -29,9 +28,6 @@ const TabLoading = ({ label }: { label: string }) => (
   </div>
 );
 
-const KanbanView = dynamic(() => import('@/components/KanbanView'), {
-  loading: () => <TabLoading label="กำลังโหลด Kanban Board..." />,
-});
 const RequirementExplorerView = dynamic(() => import('@/components/RequirementExplorerView'), {
   loading: () => <TabLoading label="กำลังโหลดตาราง Requirement..." />,
 });
@@ -44,9 +40,8 @@ const DeleteConfirmModal = dynamic(() => import('@/components/DeleteConfirmModal
 
 const TAB_HEADINGS: Record<ActiveTab, { title: string; description: string }> = {
   dashboard: { title: 'ภาพรวมโครงการ', description: 'ความคืบหน้าของ Requirement แยกตามระบบหลัก โมดูล และผู้รับผิดชอบ' },
-  kanban: { title: 'Kanban Board', description: 'ติดตามงานตั้งแต่ร่างข้อกำหนดจนถึงส่งมอบ ลากการ์ดหรือกด "ส่งต่อ" เพื่อเปลี่ยนสถานะ' },
-  explorer: { title: 'ตาราง Requirement', description: 'ค้นหา กรอง และจัดการ Requirement ทั้งหมดตามระบบหลักและโมดูล' },
-  priority: { title: 'แยกตาม Priority', description: 'จัดลำดับงานจาก High ไป Low เพื่อวางแผนให้ทันกำหนด SIT' },
+  explorer: { title: 'ตาราง Requirement', description: 'ค้นหา กรอง เรียงลำดับ และจัดการ Requirement ทั้งหมด คลิกหัวคอลัมน์เพื่อเรียง A-Z / Z-A' },
+  priority: { title: 'แยกตาม Priority', description: 'มุมมองแบบกะทัดรัด จัดลำดับงานจาก High ไป Low เพื่อวางแผนให้ทันกำหนด SIT' },
 };
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -70,11 +65,7 @@ export default function HomePage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Excel export
-  const [exportProgress, setExportProgress] = useState<{
-    current: number;
-    total: number;
-    message: string;
-  } | null>(null);
+  const [exportProgress, setExportProgress] = useState<{ current: number; total: number; message: string } | null>(null);
 
   // Always derive the open records from live state so they never go stale.
   const detailRequirement = useMemo(
@@ -87,7 +78,11 @@ export default function HomePage() {
   );
 
   /* ---------- navigation helpers used by the dashboard ---------- */
-  const goExplorer = (next: Partial<RequirementFilter>, core: CoreFunctionType | null = null, mod: string | null = null) => {
+  const goExplorer = (
+    next: Partial<RequirementFilter>,
+    core: CoreFunctionType | null = null,
+    mod: string | null = null
+  ) => {
     setFilter({ ...EMPTY_FILTER, ...next });
     setExplorerCore(core);
     setExplorerModule(mod);
@@ -123,10 +118,7 @@ export default function HomePage() {
   };
 
   /* ---------- detail modal actions ---------- */
-  const handleQuickUpdate = async (
-    id: string,
-    patch: Pick<Requirement, 'dev_assigned' | 'target_version' | 'remark'>
-  ) => {
+  const handleAssignDev = async (id: string, dev: string | null) => {
     const current = t.requirements.find((r) => r.id === id);
     if (!current) return;
     await t.saveRequirement(
@@ -141,10 +133,21 @@ export default function HomePage() {
         requested_by: current.requested_by,
         request_date: current.request_date,
         status: current.status,
-        ...patch,
+        dev_assigned: dev,
       },
       undefined
     );
+    t.pushToast('success', dev ? `มอบหมายให้ ${dev} แล้ว` : 'ยกเลิกการมอบหมาย Dev แล้ว');
+  };
+
+  const handleRequestInfo = async (id: string, note: string, askedBy: string) => {
+    await t.requestInfo(id, note, askedBy);
+    t.pushToast('success', 'ส่งคำขอข้อมูลเพิ่มแล้ว');
+  };
+
+  const handleReplyInfo = async (id: string, message: string, repliedBy: string) => {
+    await t.replyInfo(id, message, repliedBy);
+    t.pushToast('success', 'บันทึกการให้ข้อมูลแล้ว ปิดคำขอเรียบร้อย');
   };
 
   /* ---------- delete ---------- */
@@ -194,11 +197,9 @@ export default function HomePage() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         total={t.requirements.length}
+        needsInfoCount={t.needsInfoCount}
         loading={t.loading}
         exporting={exportProgress !== null}
-        team={t.team}
-        currentUser={t.currentUser}
-        onCurrentUserChange={t.setCurrentUser}
         onCreate={() => openCreate()}
         onRefresh={() => void t.reload()}
         onExport={() => void handleExportExcel(t.requirements, 'All Requirements')}
@@ -209,8 +210,8 @@ export default function HomePage() {
           <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>
-              <b>Demo mode:</b> ยังไม่ได้เชื่อมต่อ Supabase — ข้อมูลถูกเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น
-              ตั้งค่า <code>NEXT_PUBLIC_SUPABASE_URL</code> และ <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> เพื่อใช้งานร่วมกันทั้งทีม
+              <b>Demo mode:</b> ยังไม่ได้เชื่อมต่อ Supabase — ข้อมูลถูกเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น ตั้งค่า{' '}
+              <code>NEXT_PUBLIC_SUPABASE_URL</code> และ <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> เพื่อใช้งานร่วมกันทั้งทีม
             </span>
           </div>
         )}
@@ -250,17 +251,15 @@ export default function HomePage() {
             {activeTab === 'dashboard' && (
               <DashboardView
                 requirements={t.requirements}
-                teamMembers={t.team}
+                developers={t.developers}
                 modules={t.modules}
                 onSelectRequirement={(r) => setDetailId(r.id)}
                 onSelectCoreFunction={(core) => goExplorer({}, core)}
-                onFilterByModule={(mod, core) =>
-                  goExplorer({}, (core as CoreFunctionType) || DEFAULT_CORE_FUNCTION, mod)
-                }
+                onFilterByModule={(mod, core) => goExplorer({}, (core as CoreFunctionType) || DEFAULT_CORE_FUNCTION, mod)}
                 onFilterByStatus={(status) => goExplorer({ status })}
                 onFilterByPriority={(priority) => goExplorer({ priority })}
-                onFilterByReporter={(requested_by) => goExplorer({ requested_by })}
                 onFilterByDev={(dev_assigned) => goExplorer({ dev_assigned })}
+                onFilterNeedsInfo={() => goExplorer({ needs_info: true })}
                 onGoToTable={() => goExplorer({})}
                 onGoToPriorityList={() => {
                   setActiveTab('priority');
@@ -269,21 +268,12 @@ export default function HomePage() {
               />
             )}
 
-            {activeTab === 'kanban' && (
-              <KanbanView
-                requirements={t.requirements}
-                team={t.team}
-                onSelectRequirement={(r) => setDetailId(r.id)}
-                onChangeStatus={t.changeStatus}
-                onCreateRequirement={(status: RequirementStatusType) => openCreate({ status })}
-              />
-            )}
-
             {activeTab === 'explorer' && (
               <RequirementExplorerView
                 requirements={t.requirements}
                 modules={t.modules}
-                teamMembers={t.team}
+                developers={t.developers}
+                team={t.team}
                 filter={filter}
                 onFilterChange={setFilter}
                 selectedCore={explorerCore}
@@ -316,18 +306,18 @@ export default function HomePage() {
 
       {exportProgress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200 space-y-4">
+          <div className="bg-white rounded-2xl shadow-pop max-w-md w-full p-6 border border-line space-y-4">
             <div className="flex items-center gap-3">
               <div className="h-11 w-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                 <FileSpreadsheet className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900">กำลังสร้างไฟล์สรุป Requirement Excel (.xlsx)</h3>
+                <h3 className="text-sm font-bold text-slate-900">กำลังสร้างไฟล์สรุป Requirement Excel (.xlsx)</h3>
                 <p className="text-xs text-slate-500 mt-0.5">{exportProgress.message}</p>
               </div>
             </div>
             <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-bold text-slate-600">
+              <div className="flex justify-between text-xs font-semibold text-slate-600">
                 <span>ความคืบหน้า</span>
                 <span>{exportPct}%</span>
               </div>
@@ -346,11 +336,13 @@ export default function HomePage() {
         initialData={editing}
         presets={presets}
         nextReqIdPreview={t.nextReqIdPreview}
-        currentUser={t.currentUser}
+        rememberedName={t.lastName}
         modules={t.modules}
         team={t.team}
+        developers={t.developers}
         onAddModule={t.addModule}
         onAddTeamMember={(name) => t.addTeamMember(name)}
+        onAddDeveloper={t.addDeveloper}
       />
 
       <RequirementDetailModal
@@ -358,10 +350,16 @@ export default function HomePage() {
         onClose={() => setDetailId(null)}
         requirement={detailRequirement}
         team={t.team}
+        developers={t.developers}
+        rememberedName={t.lastName}
         onEdit={openEdit}
         onDelete={setDeleteId}
         onStatusChange={t.changeStatus}
-        onQuickUpdate={handleQuickUpdate}
+        onAssignDev={handleAssignDev}
+        onRequestInfo={handleRequestInfo}
+        onReplyInfo={handleReplyInfo}
+        onAddFile={t.addFile}
+        onDeleteFile={t.deleteFile}
         loadActivity={t.loadActivity}
         onAddComment={t.addComment}
       />

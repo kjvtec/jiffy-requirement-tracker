@@ -1,13 +1,17 @@
 import { supabase } from '@/lib/supabase';
 import type { ActivityAction, Requirement, RequirementImage } from '@/types';
-import { DEFAULT_MODULES, DEFAULT_TEAM_MEMBERS } from './defaults';
-import { mapActivity, mapModule, mapRequirement, mapTeamMember } from './mappers';
+import { DEFAULT_DEVELOPER_LIST, DEFAULT_MODULES, DEFAULT_TEAM_MEMBERS } from './defaults';
+import { mapActivity, mapDeveloper, mapModule, mapRequirement, mapTeamMember } from './mappers';
 import type { DataStore, TrackerSnapshot } from './store';
 
-const REQUIREMENT_SELECT =
-  '*, images:requirement_images(id, requirement_id, file_url, file_name, file_size, created_at)';
+const IMAGES_EMBED =
+  'images:requirement_images(id, requirement_id, file_url, file_name, file_size, created_at)';
+const FILES_EMBED =
+  'files:requirement_files(id, requirement_id, file_name, file_size, mime_type, drive_file_id, web_view_link, uploaded_by, created_at)';
 
 const UNIQUE_VIOLATION = '23505';
+
+const SCHEMA_HINT = 'กรุณารัน supabase/requirement_schema.sql ใน Supabase SQL Editor';
 
 function fail(context: string, error: { message: string; code?: string } | null): void {
   if (error) throw new Error(`${context}: ${error.message}`);
@@ -55,40 +59,64 @@ async function syncImages(requirementId: string, images: RequirementImage[]): Pr
   }
 }
 
+/**
+ * Load requirements. If the newer `requirement_files` table does not exist yet
+ * (schema not re-run) fall back to a query without it instead of breaking the app.
+ */
+async function selectRequirements(): Promise<{ rows: unknown[]; warning?: string }> {
+  const full = await supabase
+    .from('requirements')
+    .select(`*, ${IMAGES_EMBED}, ${FILES_EMBED}`)
+    .order('created_at', { ascending: false });
+  if (!full.error) return { rows: full.data || [] };
+
+  const basic = await supabase
+    .from('requirements')
+    .select(`*, ${IMAGES_EMBED}`)
+    .order('created_at', { ascending: false });
+  if (basic.error) throw new Error(`โหลดข้อมูล Requirement ไม่สำเร็จ: ${basic.error.message}`);
+  return {
+    rows: basic.data || [],
+    warning: `ยังไม่พบตาราง requirement_files — ${SCHEMA_HINT} (ไฟล์แนบ Google Drive จะใช้ไม่ได้จนกว่าจะรัน)`,
+  };
+}
+
 export const supabaseStore: DataStore = {
   mode: 'supabase',
 
   async load(): Promise<TrackerSnapshot> {
-    const [reqRes, modRes, teamRes] = await Promise.all([
-      supabase.from('requirements').select(REQUIREMENT_SELECT).order('created_at', { ascending: false }),
-      supabase.from('requirement_modules').select('id, core_function, name').order('name'),
+    const [reqRes, modRes, teamRes, devRes] = await Promise.all([
+      selectRequirements(),
+      supabase.from('requirement_modules').select('id, core_function, name').order('id'),
       supabase.from('requirement_team_members').select('id, name, role').order('name'),
+      supabase.from('requirement_developers').select('id, name').order('name'),
     ]);
-
-    if (reqRes.error) throw new Error(`โหลดข้อมูล Requirement ไม่สำเร็จ: ${reqRes.error.message}`);
 
     const missing: string[] = [];
     if (modRes.error) missing.push('requirement_modules');
     if (teamRes.error) missing.push('requirement_team_members');
+    if (devRes.error) missing.push('requirement_developers');
+
+    const warnings: string[] = [];
+    if (reqRes.warning) warnings.push(reqRes.warning);
+    if (missing.length > 0) {
+      warnings.push(
+        `ไม่พบตาราง ${missing.join(', ')} ใน Supabase — ${SCHEMA_HINT} (ตอนนี้ใช้ค่าเริ่มต้นชั่วคราว และบันทึกการเปลี่ยนแปลงส่วนนี้ไม่ได้)`
+      );
+    }
 
     return {
-      requirements: (reqRes.data || []).map(mapRequirement),
+      requirements: reqRes.rows.map(mapRequirement),
       modules: modRes.error ? DEFAULT_MODULES : (modRes.data || []).map(mapModule),
       team: teamRes.error ? DEFAULT_TEAM_MEMBERS : (teamRes.data || []).map(mapTeamMember),
-      warning:
-        missing.length > 0
-          ? `ไม่พบตาราง ${missing.join(', ')} ใน Supabase — กรุณารัน supabase/requirement_schema.sql ใหม่ (ตอนนี้ใช้ค่าเริ่มต้นชั่วคราว และบันทึกการเปลี่ยนแปลงส่วนนี้ไม่ได้)`
-          : undefined,
+      developers: devRes.error ? DEFAULT_DEVELOPER_LIST : (devRes.data || []).map(mapDeveloper),
+      warning: warnings.length > 0 ? warnings.join(' | ') : undefined,
     };
   },
 
   async loadRequirements() {
-    const { data, error } = await supabase
-      .from('requirements')
-      .select(REQUIREMENT_SELECT)
-      .order('created_at', { ascending: false });
-    if (error) throw new Error(`โหลดข้อมูล Requirement ไม่สำเร็จ: ${error.message}`);
-    return (data || []).map(mapRequirement);
+    const { rows, warning } = await selectRequirements();
+    return { requirements: rows.map(mapRequirement), warning };
   },
 
   async createRequirement(input, images, actor): Promise<Requirement> {
@@ -96,7 +124,7 @@ export const supabaseStore: DataStore = {
     const { data, error } = await supabase
       .from('requirements')
       .insert(input)
-      .select(REQUIREMENT_SELECT)
+      .select(`*, ${IMAGES_EMBED}`)
       .single();
     fail('สร้าง Requirement ไม่สำเร็จ', error);
     const created = mapRequirement(data);
@@ -126,9 +154,56 @@ export const supabaseStore: DataStore = {
   },
 
   async deleteRequirement(id) {
-    // Images and activity rows are removed by ON DELETE CASCADE.
+    // Images, files and activity rows are removed by ON DELETE CASCADE.
     const { error } = await supabase.from('requirements').delete().eq('id', id);
     fail('ลบ Requirement ไม่สำเร็จ', error);
+  },
+
+  async requestInfo(id, note, askedBy) {
+    const { error } = await supabase
+      .from('requirements')
+      .update({
+        info_requested: true,
+        info_request_note: note,
+        info_requested_by: askedBy,
+        info_requested_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+    fail(`ส่งคำขอข้อมูลเพิ่มไม่สำเร็จ (${SCHEMA_HINT})`, error);
+    await logActivity({
+      requirement_id: id,
+      actor: askedBy,
+      action: 'info_request',
+      message: note,
+    });
+  },
+
+  async replyInfo(id, message, repliedBy) {
+    const { error } = await supabase.from('requirements').update({ info_requested: false }).eq('id', id);
+    fail('บันทึกการให้ข้อมูลไม่สำเร็จ', error);
+    await logActivity({
+      requirement_id: id,
+      actor: repliedBy,
+      action: 'info_reply',
+      message,
+    });
+  },
+
+  async addFile(requirementId, file, actor) {
+    const { error } = await supabase.from('requirement_files').insert({ requirement_id: requirementId, ...file });
+    fail(`บันทึกไฟล์แนบไม่สำเร็จ (${SCHEMA_HINT})`, error);
+    await logActivity({
+      requirement_id: requirementId,
+      actor,
+      action: 'file',
+      message: `แนบไฟล์ ${file.file_name}`,
+    });
+  },
+
+  async deleteFile(fileId) {
+    // Removes the link only; the file stays in Google Drive.
+    const { error } = await supabase.from('requirement_files').delete().eq('id', fileId);
+    fail('ลบไฟล์แนบไม่สำเร็จ', error);
   },
 
   async loadActivity(requirementId) {
@@ -173,12 +248,24 @@ export const supabaseStore: DataStore = {
   },
 
   async deleteModule(core, name) {
-    const { error } = await supabase.from('requirement_modules').delete().eq('core_function', core).eq('name', name);
+    const { error } = await supabase
+      .from('requirement_modules')
+      .delete()
+      .eq('core_function', core)
+      .eq('name', name);
     fail('ลบโมดูลไม่สำเร็จ', error);
   },
 
   async addTeamMember(name, role) {
     const { error } = await supabase.from('requirement_team_members').insert({ name, role: role || null });
-    fail(error?.code === UNIQUE_VIOLATION ? 'มีชื่อนี้อยู่ในทีมแล้ว' : 'เพิ่มสมาชิกไม่สำเร็จ', error);
+    fail(error?.code === UNIQUE_VIOLATION ? 'มีชื่อนี้อยู่ในรายชื่อผู้ขอแล้ว' : 'เพิ่มผู้ขอไม่สำเร็จ', error);
+  },
+
+  async addDeveloper(name) {
+    const { error } = await supabase.from('requirement_developers').insert({ name });
+    fail(
+      error?.code === UNIQUE_VIOLATION ? 'มี Dev ชื่อนี้อยู่แล้ว' : `เพิ่ม Dev ไม่สำเร็จ (${SCHEMA_HINT})`,
+      error
+    );
   },
 };
