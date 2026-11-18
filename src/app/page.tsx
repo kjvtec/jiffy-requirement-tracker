@@ -54,7 +54,7 @@ const IssueModal = dynamic(() => import('@/components/IssueModal'));
 const IssueDetailModal = dynamic(() => import('@/components/IssueDetailModal'));
 const DeleteGuardOverlay = dynamic(() => import('@/components/DeleteGuardOverlay'));
 
-const SNAPSHOT_CACHE_KEY = 'jiffy_issue_snapshot_v1';
+const SNAPSHOT_CACHE_KEY = 'jiffy_requirement_snapshot_v3';
 
 interface CachedSnapshot {
   issues: Issue[];
@@ -239,23 +239,61 @@ export default function HomePage() {
     []
   );
 
-  // Fast issue-only refresh (used after mutations or fallback resync)
+  const mapRequirementRow = useCallback((r: any): Issue => ({
+    id: r.id,
+    log_id: r.req_id || r.log_id || 'JFY-REQ-01',
+    priority: r.priority || '2.Medium',
+    type: r.type || 'New Feature',
+    core_function: (r.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType,
+    module: r.module || 'General',
+    details: r.details || r.title || '',
+    raise_by: r.requested_by || r.raise_by || 'Team',
+    raise_date: r.request_date || r.raise_date || r.created_at || new Date().toISOString(),
+    status:
+      r.status === 'Draft'
+        ? 'Open'
+        : r.status === 'In Review'
+        ? 'Need Info'
+        : r.status === 'In Development'
+        ? 'In Progress'
+        : r.status === 'Testing'
+        ? 'Test'
+        : r.status === 'Done'
+        ? 'Closed'
+        : r.status || 'Open',
+    resolution: r.remark || r.resolution || '',
+    closed_by: r.dev_assigned || r.closed_by || null,
+    closed_version: r.target_version || r.closed_version || null,
+    remark: r.remark || null,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+    images: (r.images || r.requirement_images || r.issue_images || []).map((img: any) => ({
+      id: img.id,
+      issue_id: img.requirement_id || img.issue_id,
+      file_url: img.file_url,
+      file_name: img.file_name,
+      file_size: img.file_size,
+    })),
+  }), []);
+
+  // Fast requirement-only refresh (used after mutations or fallback resync)
   const fetchIssuesOnly = useCallback(async () => {
     if (!isSupabaseConfigured) return;
     const { data, error } = await supabase
-      .from('issues')
-      .select('*, images:issue_images(id, issue_id, file_url, file_name, file_size)')
+      .from('requirements')
+      .select('*, images:requirement_images(id, requirement_id, file_url, file_name, file_size)')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    if (data && data.length > 0) {
-      const dbHasCoreCol = 'core_function' in data[0];
-      setNeedsSchemaMigration(!dbHasCoreCol);
-      const normalizedIssues = normalizeIssueRows(data as Issue[], dbHasCoreCol);
-      setIssues(normalizedIssues);
-      writeSnapshotCache({ issues: normalizedIssues });
+    if (error) {
+      console.warn('Requirements table error:', error);
+      return;
     }
-  }, [normalizeIssueRows]);
+    if (data) {
+      const mapped = data.map(mapRequirementRow);
+      setIssues(mapped);
+      writeSnapshotCache({ issues: mapped });
+    }
+  }, [mapRequirementRow]);
 
   // Load data (initial load or manual refresh)
   const fetchData = useCallback(async () => {
@@ -270,24 +308,20 @@ export default function HomePage() {
 
     try {
       const includeMetadata = !metadataLoadedRef.current;
-      const issuesPromise = supabase
-        .from('issues')
-        .select('*, images:issue_images(id, issue_id, file_url, file_name, file_size)')
+      const reqPromise = supabase
+        .from('requirements')
+        .select('*, images:requirement_images(id, requirement_id, file_url, file_name, file_size)')
         .order('created_at', { ascending: false });
 
-      const [modulesRes, teamRes, issuesRes] = await Promise.all([
+      const [modulesRes, teamRes, reqRes] = await Promise.all([
         includeMetadata
           ? supabase.from('modules').select('id, core_function, name').order('name')
           : Promise.resolve({ data: null }),
         includeMetadata
           ? supabase.from('team_members').select('id, name, role').order('name')
           : Promise.resolve({ data: null }),
-        issuesPromise,
+        reqPromise,
       ]);
-
-      const dbHasCoreCol =
-        Boolean(issuesRes.data && issuesRes.data.length > 0 && 'core_function' in issuesRes.data[0]);
-      setNeedsSchemaMigration(Boolean(issuesRes.data && issuesRes.data.length > 0 && !dbHasCoreCol));
 
       let nextModules: SystemModule[] | undefined;
       if (includeMetadata) {
@@ -321,11 +355,11 @@ export default function HomePage() {
         metadataLoadedRef.current = true;
       }
 
-      if (issuesRes.data && issuesRes.data.length > 0) {
-        const normalizedIssues = normalizeIssueRows(issuesRes.data as Issue[], dbHasCoreCol);
-        setIssues(normalizedIssues);
+      if (reqRes.data && reqRes.data.length > 0) {
+        const normalized = reqRes.data.map(mapRequirementRow);
+        setIssues(normalized);
         writeSnapshotCache({
-          issues: normalizedIssues,
+          issues: normalized,
           modules: nextModules,
           teamMembers: nextTeam,
         });
@@ -334,14 +368,11 @@ export default function HomePage() {
       }
     } catch (err) {
       console.error('Error fetching Supabase data:', err);
-      setIssues((prev) => (prev.length > 0 ? prev : []));
-      if (!readSnapshotCache()) {
-        setIssues(await loadFallbackIssues());
-      }
+      setIssues(await loadFallbackIssues());
     } finally {
       setLoading(false);
     }
-  }, [mergeModulesWithDefaults, normalizeIssueRows]);
+  }, [mapRequirementRow, mergeModulesWithDefaults]);
 
   useEffect(() => {
     // Hydrate cached snapshot immediately for instant repeat-visit paint while Supabase revalidates
@@ -385,7 +416,7 @@ export default function HomePage() {
         if (num > maxNum) maxNum = num;
       }
     });
-    return `ISSUE_${maxNum + 1}`;
+    return `JFY-REQ-${String(maxNum + 1).padStart(2, '0')}`;
   }, [issues]);
 
   // Handle Save
@@ -394,105 +425,62 @@ export default function HomePage() {
 
     if (isSupabaseConfigured) {
       const basePayload = {
-        log_id: issueData.log_id,
-        priority: issueData.priority,
-        type: issueData.type,
-        module: issueData.module,
-        details: issueData.details,
-        raise_by: issueData.raise_by,
+        req_id: issueData.log_id,
+        title: (issueData.details || '').slice(0, 100),
+        priority: issueData.priority || '2.Medium',
+        type: issueData.type || 'New Feature',
+        module: issueData.module || 'General',
+        details: issueData.details || '',
+        requested_by: issueData.raise_by || 'Team',
         status: issueData.status || 'Open',
-        resolution: issueData.resolution,
-        closed_by: issueData.closed_by,
-        closed_version: issueData.closed_version,
-        remark: issueData.remark,
+        dev_assigned: issueData.closed_by || null,
+        target_version: issueData.closed_version || null,
+        remark: issueData.remark || issueData.resolution || null,
+        core_function: chosenCore,
       };
 
       let savedIssueId = issueData.id;
 
       if (issueData.id && !issueData.id.startsWith('legacy-') && !issueData.id.startsWith('local-')) {
         let { error: updateErr } = await supabase
-          .from('issues')
-          .update({ ...basePayload, core_function: chosenCore })
+          .from('requirements')
+          .update({ ...basePayload, updated_at: new Date().toISOString() })
           .eq('id', issueData.id);
-
-        if (updateErr && isMissingCoreColumnError(updateErr)) {
-          setNeedsSchemaMigration(true);
-          if (issueData.log_id) writeLocalCoreOverride(issueData.log_id, chosenCore);
-          const fallbackRes = await supabase
-            .from('issues')
-            .update(basePayload)
-            .eq('id', issueData.id);
-          updateErr = fallbackRes.error;
-        }
 
         if (updateErr) throw updateErr;
 
-        await supabase.from('issue_images').delete().eq('issue_id', issueData.id);
+        await supabase.from('requirement_images').delete().eq('requirement_id', issueData.id);
         if (newImages.length > 0) {
           const imagesToInsert = newImages.map((img) => ({
-            issue_id: issueData.id,
+            requirement_id: issueData.id,
             file_url: img.file_url,
             file_name: img.file_name,
             file_size: img.file_size || 0,
           }));
-          await supabase.from('issue_images').insert(imagesToInsert);
+          await supabase.from('requirement_images').insert(imagesToInsert);
         }
       } else {
+        const newUuid = crypto.randomUUID();
         let { data: newRow, error: insertErr } = await supabase
-          .from('issues')
-          .insert({ ...basePayload, core_function: chosenCore })
+          .from('requirements')
+          .insert({ id: newUuid, ...basePayload })
           .select('id')
           .single();
 
-        if (insertErr && isMissingCoreColumnError(insertErr)) {
-          setNeedsSchemaMigration(true);
-          if (issueData.log_id) writeLocalCoreOverride(issueData.log_id, chosenCore);
-          const fallbackRes = await supabase
-            .from('issues')
-            .insert(basePayload)
-            .select('id')
-            .single();
-          newRow = fallbackRes.data;
-          insertErr = fallbackRes.error;
-        }
-
         if (insertErr) throw insertErr;
-        savedIssueId = newRow?.id;
+        savedIssueId = newRow?.id || newUuid;
 
         if (newImages.length > 0 && savedIssueId) {
           const imagesToInsert = newImages.map((img) => ({
-            issue_id: savedIssueId,
+            requirement_id: savedIssueId,
             file_url: img.file_url,
             file_name: img.file_name,
             file_size: img.file_size || 0,
           }));
-          await supabase.from('issue_images').insert(imagesToInsert);
+          await supabase.from('requirement_images').insert(imagesToInsert);
         }
       }
 
-      if (savedIssueId && !savedIssueId.startsWith('legacy-') && !savedIssueId.startsWith('local-')) {
-        const { data: freshRow } = await supabase
-          .from('issues')
-          .select('*, images:issue_images(id, issue_id, file_url, file_name, file_size)')
-          .eq('id', savedIssueId)
-          .single();
-
-        if (freshRow) {
-          const normalizedRow: Issue = {
-            ...(freshRow as Issue),
-            core_function: ((freshRow as Issue).core_function || chosenCore) as CoreFunctionType,
-          };
-          setIssues((prev) => {
-            const exists = prev.some((i) => i.id === normalizedRow.id);
-            const next = exists
-              ? prev.map((i) => (i.id === normalizedRow.id ? normalizedRow : i))
-              : [normalizedRow, ...prev];
-            writeSnapshotCache({ issues: next });
-            return next;
-          });
-          return;
-        }
-      }
       await fetchIssuesOnly();
     } else {
       if (issueData.id) {
@@ -509,7 +497,7 @@ export default function HomePage() {
           log_id: issueData.log_id || nextLogId,
           core_function: chosenCore,
           priority: issueData.priority || '2.Medium',
-          type: issueData.type || 'Issue',
+          type: issueData.type || 'New Feature',
           module: issueData.module || 'General',
           details: issueData.details || '',
           raise_by: issueData.raise_by || 'Kraijate',
@@ -552,9 +540,11 @@ export default function HomePage() {
     }
 
     if (isSupabaseConfigured && !issueId.startsWith('legacy-') && !issueId.startsWith('local-')) {
-      const updates: Record<string, unknown> = { status: newStatus };
-      if (closedDate) updates.closed_date = closedDate;
-      const { error } = await supabase.from('issues').update(updates).eq('id', issueId);
+      const updates: Record<string, unknown> = {
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('requirements').update(updates).eq('id', issueId);
       if (error) {
         await fetchIssuesOnly();
       }
@@ -567,7 +557,7 @@ export default function HomePage() {
     [issues, teamMembers]
   );
 
-  // Inline Update from Detail Modal (syncs single issue without full reload)
+  // Inline Update from Detail Modal (syncs single requirement without full reload)
   const handleInlineUpdateIssue = async (
     issueId: string,
     updates: Partial<Issue>,
@@ -575,42 +565,43 @@ export default function HomePage() {
   ) => {
     const nowIso = new Date().toISOString();
     const safeUpdates: Record<string, unknown> = {};
-    if (updates.resolution !== undefined) safeUpdates.resolution = updates.resolution;
-    if (updates.closed_by !== undefined) safeUpdates.closed_by = updates.closed_by;
-    if (updates.closed_version !== undefined) safeUpdates.closed_version = updates.closed_version;
+    if (updates.resolution !== undefined) safeUpdates.remark = updates.resolution;
+    if (updates.closed_by !== undefined) safeUpdates.dev_assigned = updates.closed_by;
+    if (updates.closed_version !== undefined) safeUpdates.target_version = updates.closed_version;
     if (updates.remark !== undefined) safeUpdates.remark = updates.remark;
-    if (updates.status !== undefined) {
-      safeUpdates.status = updates.status;
-      if (updates.status === 'Closed' && !updates.closed_date) {
-        safeUpdates.closed_date = nowIso;
-      }
-    }
-    if (updates.closed_date !== undefined) safeUpdates.closed_date = updates.closed_date;
+    if (updates.status !== undefined) safeUpdates.status = updates.status;
+    safeUpdates.updated_at = nowIso;
 
     let syncedImages = newImages;
 
     if (isSupabaseConfigured && !issueId.startsWith('legacy-') && !issueId.startsWith('local-')) {
       const { error: updateErr } = await supabase
-        .from('issues')
+        .from('requirements')
         .update(safeUpdates)
         .eq('id', issueId);
 
       if (updateErr) throw updateErr;
 
-      await supabase.from('issue_images').delete().eq('issue_id', issueId);
+      await supabase.from('requirement_images').delete().eq('requirement_id', issueId);
       if (newImages.length > 0) {
         const imagesToInsert = newImages.map((img) => ({
-          issue_id: issueId,
+          requirement_id: issueId,
           file_url: img.file_url,
           file_name: img.file_name,
           file_size: img.file_size || 0,
         }));
         const { data: insertedImages } = await supabase
-          .from('issue_images')
+          .from('requirement_images')
           .insert(imagesToInsert)
-          .select('id, issue_id, file_url, file_name, file_size');
+          .select('id, requirement_id, file_url, file_name, file_size');
         if (insertedImages) {
-          syncedImages = insertedImages as IssueImage[];
+          syncedImages = insertedImages.map((img: any) => ({
+            id: img.id,
+            issue_id: img.requirement_id,
+            file_url: img.file_url,
+            file_name: img.file_name,
+            file_size: img.file_size,
+          }));
         }
       }
     }
@@ -641,7 +632,7 @@ export default function HomePage() {
     });
 
     if (isSupabaseConfigured && !issueId.startsWith('legacy-') && !issueId.startsWith('local-')) {
-      const { error } = await supabase.from('issues').delete().eq('id', issueId);
+      const { error } = await supabase.from('requirements').delete().eq('id', issueId);
       if (error) {
         await fetchIssuesOnly();
       }
@@ -996,7 +987,7 @@ export default function HomePage() {
                 }`}
               >
                 <FolderTree className="w-4 h-4 shrink-0" />
-                ดูข้อมูลปัญหาแยกกลุ่ม ({issues.length})
+                ดูข้อมูล Requirement แยกกลุ่ม ({issues.length})
               </button>
 
               <button

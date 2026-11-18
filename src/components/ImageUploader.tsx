@@ -59,12 +59,24 @@ export default function ImageUploader({ images, onChange, issueLogId, title = 'à
         const ext = file.name.split('.').pop() || 'png';
         const filePath = `${cleanLogId}/${timestamp}_${randomStr}.${ext}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('issue-attachments')
+        let targetBucket = 'requirement-attachments';
+        let { error: uploadError } = await supabase.storage
+          .from(targetBucket)
           .upload(filePath, compressedFile, {
             contentType: compressedFile.type,
             upsert: false,
           });
+
+        if (uploadError && uploadError.message?.includes('Bucket not found')) {
+          targetBucket = 'issue-attachments';
+          const retry = await supabase.storage
+            .from(targetBucket)
+            .upload(filePath, compressedFile, {
+              contentType: compressedFile.type,
+              upsert: false,
+            });
+          uploadError = retry.error;
+        }
 
         if (uploadError) {
           console.error('Storage upload error:', uploadError);
@@ -74,7 +86,7 @@ export default function ImageUploader({ images, onChange, issueLogId, title = 'à
 
         // 3. Get public URL
         const { data: publicUrlData } = supabase.storage
-          .from('issue-attachments')
+          .from(targetBucket)
           .getPublicUrl(filePath);
 
         newImages.push({
