@@ -10,6 +10,7 @@ import {
   ListOrdered,
   CircleHelp,
   ExternalLink,
+  Bug,
 } from 'lucide-react';
 
 export type ActiveTab = 'dashboard' | 'explorer' | 'priority';
@@ -28,6 +29,7 @@ interface AppHeaderProps {
 }
 
 const HQ_URL = process.env.NEXT_PUBLIC_CLOUD_HQ_URL || 'https://ras-dev.pttrm.com/backoffice/';
+const ISSUE_TRACKER_URL = process.env.NEXT_PUBLIC_ISSUE_TRACKER_URL || 'https://issue-log-hq.vercel.app/';
 
 export default function AppHeader({
   activeTab,
@@ -72,6 +74,27 @@ export default function AppHeader({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <a
+                href={ISSUE_TRACKER_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative inline-flex items-center gap-2 px-3.5 h-9 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-rose-600 via-red-600 to-rose-600 hover:from-rose-500 hover:to-red-500 pulse-glow-rose hover:scale-[1.03] active:scale-95 transition-all duration-200 overflow-hidden group border border-rose-400/40"
+                title="เปิด Issue Tracker (https://issue-log-hq.vercel.app/)"
+              >
+                {/* Light shimmer sweep effect */}
+                <span
+                  aria-hidden
+                  className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-btn-shimmer pointer-events-none"
+                />
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-90"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-300"></span>
+                </span>
+                <Bug className="w-4 h-4 text-white relative transition-transform duration-200 group-hover:rotate-12 group-hover:scale-110" aria-hidden />
+                <span className="relative tracking-wide">Issue Tracker</span>
+                <ExternalLink className="w-3.5 h-3.5 text-white/90 relative hidden sm:inline-block" aria-hidden />
+              </a>
+
               <a
                 href={HQ_URL}
                 target="_blank"
