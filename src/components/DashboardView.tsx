@@ -17,6 +17,8 @@ import {
   Plus,
   Trash2,
   X,
+  Settings2,
+  Check,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -155,6 +157,7 @@ export default function DashboardView({
   const [urgentCollapsed, setUrgentCollapsed] = useState(false);
 
   // Developer management state
+  const [isManageDevMode, setIsManageDevMode] = useState(false);
   const [editingDev, setEditingDev] = useState<{ oldName: string; newName: string; total: number } | null>(null);
   const [addDevOpen, setAddDevOpen] = useState(false);
   const [newDevName, setNewDevName] = useState('');
@@ -506,21 +509,47 @@ export default function DashboardView({
               title="ภาระงาน Developer"
               hint={`${developers.length} คน · ยังไม่มอบหมาย ${unassigned} เรื่อง`}
             />
-            {onAddDeveloper && (
-              <button
-                type="button"
-                onClick={() => {
-                  setDevError(null);
-                  setNewDevName('');
-                  setAddDevOpen(true);
-                }}
-                className="btn-secondary !py-1 !px-2.5 text-xs font-semibold inline-flex items-center gap-1.5"
-                title="เพิ่ม Developer ใหม่"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>เพิ่ม Dev</span>
-              </button>
-            )}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isManageDevMode && onAddDeveloper && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDevError(null);
+                    setNewDevName('');
+                    setAddDevOpen(true);
+                  }}
+                  className="btn-primary !py-1 !px-2.5 text-xs font-bold inline-flex items-center gap-1"
+                  title="เพิ่ม Developer ใหม่"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>เพิ่ม Dev</span>
+                </button>
+              )}
+              {onRenameDeveloper && (
+                <button
+                  type="button"
+                  onClick={() => setIsManageDevMode((v) => !v)}
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors inline-flex items-center gap-1.5 ${
+                    isManageDevMode
+                      ? 'bg-indigo-600 text-white shadow-xs hover:bg-indigo-700'
+                      : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200'
+                  }`}
+                  title={isManageDevMode ? 'ปิดโหมดจัดการ' : 'เปิดโหมดจัดการรายชื่อ Dev'}
+                >
+                  {isManageDevMode ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>เสร็จสิ้น</span>
+                    </>
+                  ) : (
+                    <>
+                      <Settings2 className="w-3.5 h-3.5" />
+                      <span>จัดการ</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
           {devWorkload.length === 0 ? (
             <p className="text-sm text-slate-400 py-6 text-center">ยังไม่มีรายชื่อ Dev</p>
@@ -571,38 +600,40 @@ export default function DashboardView({
                     </div>
                   </button>
 
-                  {/* Actions: Edit & Delete */}
-                  <div className="pr-2 flex items-center gap-1 shrink-0">
-                    {onRenameDeveloper && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDevError(null);
-                          setEditingDev({ oldName: d.name, newName: d.name, total: d.total });
-                        }}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-100 transition-colors"
-                        title={`แก้ไขชื่อ ${d.name}`}
-                        aria-label={`แก้ไขชื่อ ${d.name}`}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                    {onDeleteDeveloper && d.total === 0 && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteDev(d.name);
-                        }}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                        title={`ลบ ${d.name} (ไม่มีงานค้าง)`}
-                        aria-label={`ลบ ${d.name}`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  {/* Actions: Edit & Delete (แสดงเฉพาะเมื่อเปิดโหมดจัดการ) */}
+                  {isManageDevMode && (
+                    <div className="pr-2 flex items-center gap-1 shrink-0">
+                      {onRenameDeveloper && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDevError(null);
+                            setEditingDev({ oldName: d.name, newName: d.name, total: d.total });
+                          }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-100 transition-colors"
+                          title={`แก้ไขชื่อ ${d.name}`}
+                          aria-label={`แก้ไขชื่อ ${d.name}`}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {onDeleteDeveloper && d.total === 0 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDev(d.name);
+                          }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          title={`ลบ ${d.name} (ไม่มีงานค้าง)`}
+                          aria-label={`ลบ ${d.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
