@@ -28,6 +28,7 @@ import {
   type ActivityEntry,
   type Developer,
   type Requirement,
+  type RequirementImage,
   type RequirementStatusType,
   type TeamMember,
 } from '@/types';
@@ -37,6 +38,8 @@ import type { NewFile } from '@/lib/data/store';
 import { PriorityBadge, formatDateTime } from './Badges';
 import DriveFilesPanel from './DriveFilesPanel';
 import LightboxModal from './LightboxModal';
+import ImageUploader from './ImageUploader';
+import { encodeMessage, splitMessage } from '@/lib/activityImages';
 
 interface RequirementDetailModalProps {
   isOpen: boolean;
@@ -101,6 +104,8 @@ export default function RequirementDetailModal({
 }: RequirementDetailModalProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [lightboxImages, setLightboxImages] = useState<RequirementImage[]>([]);
+  const [commentImages, setCommentImages] = useState<RequirementImage[]>([]);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const [devAssigned, setDevAssigned] = useState('');
@@ -158,6 +163,7 @@ export default function RequirementDetailModal({
     setAskNote('');
     setReplyText('');
     setComment('');
+    setCommentImages([]);
     setAskBy(requirement.dev_assigned || (developers.some((d) => d.name === rememberedName) ? rememberedName : ''));
     setReplyBy(requirement.requested_by || '');
     setCommentBy(rememberedName || '');
@@ -247,15 +253,16 @@ export default function RequirementDetailModal({
 
   const handleComment = async () => {
     const text = comment.trim();
-    if (!text) return;
+    if (!text && commentImages.length === 0) return;
     if (!commentBy) {
       alert('กรุณาเลือกชื่อผู้แสดงความเห็น');
       return;
     }
     try {
       setIsCommenting(true);
-      await onAddComment(requirement.id, text, commentBy);
+      await onAddComment(requirement.id, encodeMessage(text, commentImages), commentBy);
       setComment('');
+      setCommentImages([]);
       await refreshActivity();
     } catch (e) {
       alert('บันทึกความเห็นไม่สำเร็จ: ' + errText(e));
@@ -265,15 +272,16 @@ export default function RequirementDetailModal({
   };
 
   const describe = (a: ActivityEntry): string => {
+    const message = splitMessage(a.message).text;
     switch (a.action) {
       case 'status_change':
         return `เปลี่ยนสถานะ ${a.from_status} → ${a.to_status}`;
       case 'info_request':
-        return `ขอข้อมูลเพิ่ม: ${a.message}`;
+        return `ขอข้อมูลเพิ่ม: ${message}`;
       case 'info_reply':
-        return `ให้ข้อมูลเพิ่ม: ${a.message}`;
+        return `ให้ข้อมูลเพิ่ม: ${message}`;
       default:
-        return a.message || (a.action === 'created' ? 'สร้าง Requirement' : 'แก้ไข Requirement');
+        return message || (a.action === 'created' ? 'สร้าง Requirement' : 'แก้ไข Requirement');
     }
   };
 
@@ -530,6 +538,7 @@ export default function RequirementDetailModal({
                     key={img.id || idx}
                     type="button"
                     onClick={() => {
+                      setLightboxImages(images);
                       setActiveImageIndex(idx);
                       setLightboxOpen(true);
                     }}
@@ -571,11 +580,18 @@ export default function RequirementDetailModal({
                 <option value="">-- ชื่อผู้ส่ง --</option>
                 {nameOptions}
               </select>
-              <button type="button" disabled={isCommenting || !comment.trim()} onClick={handleComment} className="btn-brand">
+              <button type="button" disabled={isCommenting || (!comment.trim() && commentImages.length === 0)} onClick={handleComment} className="btn-brand">
                 <Send className="w-4 h-4" aria-hidden />
                 ส่ง
               </button>
             </div>
+            <ImageUploader
+              images={commentImages}
+              onChange={setCommentImages}
+              folder={`${requirement.req_id}-update`}
+              title="แนบรูปประกอบการอัปเดต (กด Ctrl+V เพื่อแปะได้ทันที)"
+              bucketName="requirement-attachments"
+            />
             {activity.length === 0 ? (
               <p className="text-sm text-slate-400">ยังไม่มีประวัติ</p>
             ) : (
@@ -592,6 +608,30 @@ export default function RequirementDetailModal({
                         <b className="text-slate-700">{a.actor}</b> · {formatDateTime(a.created_at)}
                       </div>
                       <div className="text-sm text-slate-800 whitespace-pre-wrap">{describe(a)}</div>
+                      {(() => {
+                        const imgs = splitMessage(a.message).images;
+                        if (imgs.length === 0) return null;
+                        return (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {imgs.map((img, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => {
+                                  setLightboxImages(imgs);
+                                  setActiveImageIndex(i);
+                                  setLightboxOpen(true);
+                                }}
+                                className="h-24 w-36 rounded-lg border border-line overflow-hidden bg-slate-100 hover:border-jiffy-blue"
+                                title={img.file_name}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={img.file_url} alt={img.file_name} className="h-full w-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </li>
                   );
                 })}
@@ -613,7 +653,7 @@ export default function RequirementDetailModal({
         <LightboxModal
           isOpen={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
-          images={images}
+          images={lightboxImages}
           currentIndex={activeImageIndex}
           onNavigate={setActiveImageIndex}
         />
