@@ -39,6 +39,8 @@ import { PriorityBadge, formatDateTime } from './Badges';
 import DriveFilesPanel from './DriveFilesPanel';
 import LightboxModal from './LightboxModal';
 import ImageUploader from './ImageUploader';
+import FormattedText from './FormattedText';
+import RichCommentEditor from './RichCommentEditor';
 import { encodeMessage, splitMessage } from '@/lib/activityImages';
 
 interface RequirementDetailModalProps {
@@ -268,20 +270,6 @@ export default function RequirementDetailModal({
       alert('บันทึกความเห็นไม่สำเร็จ: ' + errText(e));
     } finally {
       setIsCommenting(false);
-    }
-  };
-
-  const describe = (a: ActivityEntry): string => {
-    const message = splitMessage(a.message).text;
-    switch (a.action) {
-      case 'status_change':
-        return `เปลี่ยนสถานะ ${a.from_status} → ${a.to_status}`;
-      case 'info_request':
-        return `ขอข้อมูลเพิ่ม: ${message}`;
-      case 'info_reply':
-        return `ให้ข้อมูลเพิ่ม: ${message}`;
-      default:
-        return message || (a.action === 'created' ? 'สร้าง Requirement' : 'แก้ไข Requirement');
     }
   };
 
@@ -517,15 +505,6 @@ export default function RequirementDetailModal({
             )}
           </div>
 
-          {/* Files from developers (Google Drive) */}
-          <DriveFilesPanel
-            files={requirement.files}
-            uploaders={developers.map((d) => d.name)}
-            defaultUploader={requirement.dev_assigned || (developers.some((d) => d.name === rememberedName) ? rememberedName : '')}
-            onAdd={(file) => onAddFile(requirement.id, file)}
-            onDelete={onDeleteFile}
-          />
-
           {/* Wireframes */}
           {images.length > 0 && (
             <div className="space-y-2">
@@ -556,87 +535,177 @@ export default function RequirementDetailModal({
             </div>
           )}
 
-          {/* Activity */}
-          <div className="space-y-3">
-            <SectionTitle icon={History} tone="bg-gradient-to-br from-amber-400 to-orange-500">
-              ประวัติการดำเนินงาน &amp; ความเห็น ({activity.length})
+          {/* 1. อัปเดตความคืบหน้า / บันทึกประวัติการดำเนินงาน (ช่องใหญ่ขึ้นพร้อม Rich Editor Toolbar) */}
+          <div className="space-y-2">
+            <SectionTitle icon={MessageSquare} tone="bg-gradient-to-br from-blue-500 to-indigo-600">
+              อัปเดตความคืบหน้า / บันทึกประวัติการดำเนินงาน
             </SectionTitle>
-            <div className="flex flex-wrap gap-2">
-              <input
-                type="text"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    void handleComment();
-                  }
-                }}
-                placeholder="เพิ่มความเห็น / อัปเดตความคืบหน้า"
-                aria-label="ความเห็น"
-                className="field flex-1 min-w-[220px]"
-              />
-              <select value={commentBy} onChange={(e) => setCommentBy(e.target.value)} className="field !w-auto font-semibold" aria-label="ผู้แสดงความเห็น">
-                <option value="">-- ชื่อผู้ส่ง --</option>
-                {nameOptions}
-              </select>
-              <button type="button" disabled={isCommenting || (!comment.trim() && commentImages.length === 0)} onClick={handleComment} className="btn-brand">
-                <Send className="w-4 h-4" aria-hidden />
-                ส่ง
-              </button>
-            </div>
-            <ImageUploader
-              images={commentImages}
-              onChange={setCommentImages}
-              folder={`${requirement.req_id}-update`}
-              title="แนบรูปประกอบการอัปเดต (กด Ctrl+V เพื่อแปะได้ทันที)"
-              bucketName="requirement-attachments"
+            <RichCommentEditor
+              value={comment}
+              onChange={setComment}
+              sender={commentBy}
+              onSenderChange={setCommentBy}
+              nameOptions={nameOptions}
+              onSubmit={handleComment}
+              isSubmitting={isCommenting}
+              hasImages={commentImages.length > 0}
             />
-            {activity.length === 0 ? (
-              <p className="text-sm text-slate-400">ยังไม่มีประวัติ</p>
-            ) : (
-              <ol className="space-y-3 border-l-2 border-slate-200 ml-3 pl-5">
-                {activity.map((a) => {
-                  const style = ACTIVITY_STYLE[a.action] ?? ACTIVITY_STYLE.update;
-                  const Icon = style.icon;
-                  return (
-                    <li key={a.id} className="relative">
-                      <span className={`absolute -left-[33px] top-0.5 h-6 w-6 rounded-full ring-4 ring-white flex items-center justify-center text-white ${style.dot}`}>
-                        <Icon className="w-3.5 h-3.5" aria-hidden />
-                      </span>
-                      <div className="text-xs text-slate-500">
-                        <b className="text-slate-700">{a.actor}</b> · {formatDateTime(a.created_at)}
-                      </div>
-                      <div className="text-sm text-slate-800 whitespace-pre-wrap">{describe(a)}</div>
-                      {(() => {
-                        const imgs = splitMessage(a.message).images;
-                        if (imgs.length === 0) return null;
-                        return (
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {imgs.map((img, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onClick={() => {
-                                  setLightboxImages(imgs);
-                                  setActiveImageIndex(i);
-                                  setLightboxOpen(true);
-                                }}
-                                className="h-24 w-36 rounded-lg border border-line overflow-hidden bg-slate-100 hover:border-jiffy-blue"
-                                title={img.file_name}
+          </div>
+
+          {/* 2. แนบรูปประกอบการอัปเดต */}
+          <ImageUploader
+            images={commentImages}
+            onChange={setCommentImages}
+            folder={`${requirement.req_id}-update`}
+            title="แนบรูปประกอบการอัปเดต (กด Ctrl+V เพื่อแปะได้ทันที)"
+            bucketName="requirement-attachments"
+          />
+
+          {/* 3. ไฟล์แนบ Google Drive (ย้ายมาไว้ใต้กล่องแนบรูป) */}
+          <DriveFilesPanel
+            files={requirement.files}
+            uploaders={developers.map((d) => d.name)}
+            defaultUploader={requirement.dev_assigned || (developers.some((d) => d.name === rememberedName) ? rememberedName : '')}
+            onAdd={(file) => onAddFile(requirement.id, file)}
+            onDelete={onDeleteFile}
+          />
+
+          {/* 4. กล่องแยกแสดง Timeline ประวัติการดำเนินงาน & การคุยชัดเจน */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <SectionTitle icon={History} tone="bg-gradient-to-br from-amber-400 to-orange-500">
+                ประวัติการดำเนินงาน &amp; Timeline การคุย ({activity.length})
+              </SectionTitle>
+              <span className="text-xs text-slate-400">
+                เรียงตามเวลาล่าสุด
+              </span>
+            </div>
+
+            <div className="rounded-2xl border-2 border-slate-200/90 bg-slate-50/70 p-4 sm:p-5 shadow-xs">
+              {activity.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-xs sm:text-sm">
+                  <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  ยังไม่มีประวัติการดำเนินงานหรือข้อความโต้ตอบ สามารถพิมพ์อัปเดตได้ที่กล่องด้านบน
+                </div>
+              ) : (
+                <div className="relative pl-6 sm:pl-8 space-y-4 before:absolute before:left-3 sm:before:left-4 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
+                  {activity.map((a) => {
+                    const style = ACTIVITY_STYLE[a.action] ?? ACTIVITY_STYLE.update;
+                    const Icon = style.icon;
+                    const msgData = splitMessage(a.message);
+                    const isInfoReq = a.action === 'info_request';
+                    const isInfoReply = a.action === 'info_reply';
+                    const isStatusChange = a.action === 'status_change';
+                    const isFile = a.action === 'file';
+
+                    let messageBody = msgData.text;
+                    if (isStatusChange) {
+                      messageBody = `เปลี่ยนสถานะจาก **${a.from_status || 'New'}** เป็น **${a.to_status}**`;
+                    } else if (isInfoReq && !messageBody.startsWith('ขอข้อมูลเพิ่ม:')) {
+                      messageBody = `**ขอข้อมูลเพิ่ม:** ${messageBody}`;
+                    } else if (isInfoReply && !messageBody.startsWith('ให้ข้อมูลเพิ่ม:')) {
+                      messageBody = `**ให้ข้อมูลเพิ่ม:** ${messageBody}`;
+                    } else if (!messageBody) {
+                      messageBody = a.action === 'created' ? 'สร้าง Requirement' : 'แก้ไข Requirement';
+                    }
+
+                    const actionLabel =
+                      a.action === 'created'
+                        ? 'สร้าง Requirement'
+                        : isStatusChange
+                          ? 'เปลี่ยนสถานะ'
+                          : isInfoReq
+                            ? 'ขอข้อมูลเพิ่ม'
+                            : isInfoReply
+                              ? 'ตอบข้อมูลแล้ว'
+                              : isFile
+                                ? 'แนบไฟล์'
+                                : 'ความเห็น / อัปเดต';
+
+                    return (
+                      <div key={a.id} className="relative group">
+                        {/* Timeline Node Avatar */}
+                        <div
+                          className={`absolute -left-[31px] sm:-left-[39px] top-1.5 h-7 w-7 sm:h-8 sm:w-8 rounded-full ring-4 ring-white flex items-center justify-center text-white text-[10px] sm:text-xs font-bold shadow-xs ${style.dot}`}
+                          title={`${a.actor} (${actionLabel})`}
+                        >
+                          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden />
+                        </div>
+
+                        {/* Speech Bubble / Card */}
+                        <div
+                          className={`rounded-2xl border p-3.5 sm:p-4 space-y-2 shadow-2xs transition-all ${
+                            isInfoReq
+                              ? 'bg-orange-50/70 border-orange-200'
+                              : isInfoReply
+                                ? 'bg-teal-50/70 border-teal-200'
+                                : isStatusChange
+                                  ? 'bg-emerald-50/50 border-emerald-200'
+                                  : 'bg-white border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-bold text-slate-900 text-sm">
+                                {a.actor}
+                              </span>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                  isInfoReq
+                                    ? 'bg-orange-100 text-orange-800 border-orange-300'
+                                    : isInfoReply
+                                      ? 'bg-teal-100 text-teal-800 border-teal-300'
+                                      : isStatusChange
+                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                        : 'bg-blue-50 text-[#044492] border-blue-200'
+                                }`}
                               >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={img.file_url} alt={img.file_name} className="h-full w-full object-cover" />
-                              </button>
-                            ))}
+                                {actionLabel}
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-medium text-slate-400">
+                              {formatDateTime(a.created_at)}
+                            </span>
                           </div>
-                        );
-                      })()}
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
+
+                          <div className="text-sm">
+                            <FormattedText text={messageBody} />
+                          </div>
+
+                          {msgData.images.length > 0 && (
+                            <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap gap-2">
+                              {msgData.images.map((img, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => {
+                                    setLightboxImages(msgData.images);
+                                    setActiveImageIndex(i);
+                                    setLightboxOpen(true);
+                                  }}
+                                  className="group relative h-24 w-36 rounded-xl border border-line overflow-hidden bg-slate-100 hover:border-[#0086FF] shadow-2xs transition-all hover:scale-[1.02]"
+                                  title={img.file_name}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={img.file_url}
+                                    alt={img.file_name}
+                                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                  />
+                                  <span className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
+                                    <ZoomIn className="w-3.5 h-3.5" /> ซูม
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
