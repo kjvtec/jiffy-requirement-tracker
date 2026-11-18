@@ -1,0 +1,718 @@
+[
+  {
+    "id": "legacy-1",
+    "log_id": "ISSUE_1",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Shop",
+    "details": "สาขา > การจัดส่งสาขา ตำบล พบว่ามี 2 ช่อง ในช่องแรกน่าจะเป็น อำเภอหรือไม่ ",
+    "raise_by": "Nat",
+    "raise_date": "2026-11-03",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE1_1.png",
+        "file_name": "ISSUE1_1.png",
+        "file_size": 83858
+      }
+    ]
+  },
+  {
+    "id": "legacy-2",
+    "log_id": "ISSUE_2",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Shop",
+    "details": "สาขา > การจัดส่งสาขา ตำบล ใส่ข้อมูลอำเภอ > ตำบล แล้ว ทำการบันทึกพบว่า ข้อมูลหายไม่แสดงบนหน้าจอ",
+    "raise_by": "Nat",
+    "raise_date": "2026-11-03",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE2_1.png",
+        "file_name": "ISSUE2_1.png",
+        "file_size": 141164
+      }
+    ]
+  },
+  {
+    "id": "legacy-3",
+    "log_id": "ISSUE_3",
+    "priority": "1.High",
+    "type": "Issue",
+    "module": "Staff",
+    "details": "Add พนักงานใหม่ พบว่าไม่สามารถ Add ได้ ขึ้น Error ",
+    "raise_by": "Nat",
+    "raise_date": "2026-11-03",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE3_1.png",
+        "file_name": "ISSUE3_1.png",
+        "file_size": 131893
+      }
+    ]
+  },
+  {
+    "id": "legacy-4",
+    "log_id": "ISSUE_4",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Salemode",
+    "details": "Salemode ไม่สามารถ Ordering ได้ ",
+    "raise_by": "Tukta",
+    "raise_date": "2026-11-03",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE4_1.png",
+        "file_name": "ISSUE4_1.png",
+        "file_size": 39759
+      }
+    ]
+  },
+  {
+    "id": "legacy-5",
+    "log_id": "ISSUE_5",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Reason code",
+    "details": "เหตุผลใน Cashin/ out เพิ่ม Ordering ",
+    "raise_by": "Tukta",
+    "raise_date": "2026-11-03",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": []
+  },
+  {
+    "id": "legacy-6",
+    "log_id": "ISSUE_6",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Reason code",
+    "details": "เหตุผลใน Expense เพิ่ม Ordering \n",
+    "raise_by": "Tukta",
+    "raise_date": "2026-11-03",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": []
+  },
+  {
+    "id": "legacy-7",
+    "log_id": "ISSUE_7",
+    "priority": "2.Medium",
+    "type": "Issue",
+    "module": "Global Setting",
+    "details": "Header/Footer เพิ่มประเภทหัวบิล/ท้ายบิล เหมือน PTTOR  \n1. ยังขาด e-Tax\n2. ควรเห็นเฉพาะ Shop /ไม่ควรเห็น Shop master หรือเปล่า",
+    "raise_by": "Tukta",
+    "raise_date": "2026-11-03",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": []
+  },
+  {
+    "id": "legacy-8",
+    "log_id": "ISSUE_8",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Payment",
+    "details": "ประเภทชำระเงิน Payment เพิ่ม Ordering ที่หน้าจอ HQ\n",
+    "raise_by": "Tukta",
+    "raise_date": "2026-11-03",
+    "status": "Test",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": "รอทดสอบบน POS",
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": []
+  },
+  {
+    "id": "legacy-9",
+    "log_id": "ISSUE_9",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Global Setting",
+    "details": "ถ้าต้องการย้าย Config จากระดับ Global > Brand > Shop ย้ายอย่างไร และถ้าต้องการย้ายย้อนกลับ Shop > Brand\n",
+    "raise_by": "Tukta",
+    "raise_date": "2026-11-03",
+    "status": "Test",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": []
+  },
+  {
+    "id": "legacy-10",
+    "log_id": "ISSUE_10",
+    "priority": "2.Medium",
+    "type": "Issue",
+    "module": "Product",
+    "details": "Barcode ที่แสดงตรง Selling By Unit ให้แสดงตาม Unit Barcode\n",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-03",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE10_1.png",
+        "file_name": "ISSUE10_1.png",
+        "file_size": 123995
+      },
+      {
+        "file_url": "/legacy-images/ISSUE10_2.png",
+        "file_name": "ISSUE10_2.png",
+        "file_size": 127993
+      }
+    ]
+  },
+  {
+    "id": "legacy-11",
+    "log_id": "ISSUE_11",
+    "priority": "2.Medium",
+    "type": "Issue",
+    "module": "Product",
+    "details": "Product List เพิ่ม Column แสดง Barcode\n",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-03",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE11_1.png",
+        "file_name": "ISSUE11_1.png",
+        "file_size": 148364
+      }
+    ]
+  },
+  {
+    "id": "legacy-12",
+    "log_id": "ISSUE_12",
+    "priority": "2.Medium",
+    "type": "Issue",
+    "module": "Price",
+    "details": "Product Price เพิ่ม Column แสดง Barcode เพื่อแสดงราคาตามหน่วยนับ\n",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-03",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-03T00:00:00Z",
+    "updated_at": "2026-11-03T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE12_1.png",
+        "file_name": "ISSUE12_1.png",
+        "file_size": 222731
+      }
+    ]
+  },
+  {
+    "id": "legacy-13",
+    "log_id": "ISSUE_13",
+    "priority": "2.Medium",
+    "type": "Issue",
+    "module": "Salemode",
+    "details": "เพิ่มกลุ่มประเภทการขาย Salemode Group",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-04",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-04T00:00:00Z",
+    "updated_at": "2026-11-04T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE13_1.png",
+        "file_name": "ISSUE13_1.png",
+        "file_size": 85447
+      }
+    ]
+  },
+  {
+    "id": "legacy-14",
+    "log_id": "ISSUE_14",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Product",
+    "details": "โครงสร้างสินค้า กรณีค้นหาแบบเท่ากับ จะไม่สามารถแตกรายละเอียดตามโครสร้างได้",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-04",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-04T00:00:00Z",
+    "updated_at": "2026-11-04T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE14_1.png",
+        "file_name": "ISSUE14_1.png",
+        "file_size": 36424
+      },
+      {
+        "file_url": "/legacy-images/ISSUE14_2.png",
+        "file_name": "ISSUE14_2.png",
+        "file_size": 121442
+      }
+    ]
+  },
+  {
+    "id": "legacy-15",
+    "log_id": "ISSUE_15",
+    "priority": "1.High",
+    "type": "Issue",
+    "module": "Product",
+    "details": "สร้าง Product ใหม่ไม่ได้  ใส่หน่วยนับไม่ได้",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-04",
+    "status": "Test",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-04T00:00:00Z",
+    "updated_at": "2026-11-04T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE15_1.png",
+        "file_name": "ISSUE15_1.png",
+        "file_size": 41282
+      },
+      {
+        "file_url": "/legacy-images/ISSUE15_2.png",
+        "file_name": "ISSUE15_2.png",
+        "file_size": 44173
+      }
+    ]
+  },
+  {
+    "id": "legacy-16",
+    "log_id": "ISSUE_16",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Login",
+    "details": "ไม่ต้องแสดง icon social ที่หน้า login",
+    "raise_by": "Tukta",
+    "raise_date": "2026-11-04",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-04T00:00:00Z",
+    "updated_at": "2026-11-04T00:00:00Z",
+    "images": []
+  },
+  {
+    "id": "legacy-17",
+    "log_id": "ISSUE_17",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Shop",
+    "details": "หัวบิลท้ายบิล ในหน้า Shop ไม่สามารถค้นหา กลุ่มหัวบิล ท้ายบิลได้ ",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-04",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-04T00:00:00Z",
+    "updated_at": "2026-11-04T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE17_1.png",
+        "file_name": "ISSUE17_1.png",
+        "file_size": 51012
+      },
+      {
+        "file_url": "/legacy-images/ISSUE17_2.png",
+        "file_name": "ISSUE17_2.png",
+        "file_size": 123964
+      }
+    ]
+  },
+  {
+    "id": "legacy-18",
+    "log_id": "ISSUE_18",
+    "priority": "1.High",
+    "type": "Issue",
+    "module": "Staff",
+    "details": "เพิ่ิ่ม Role ใหม่แล้วหายไป (User Admin)",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-04",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-04T00:00:00Z",
+    "updated_at": "2026-11-04T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE18_1.png",
+        "file_name": "ISSUE18_1.png",
+        "file_size": 99415
+      },
+      {
+        "file_url": "/legacy-images/ISSUE18_2.png",
+        "file_name": "ISSUE18_2.png",
+        "file_size": 48547
+      }
+    ]
+  },
+  {
+    "id": "legacy-19",
+    "log_id": "ISSUE_19",
+    "priority": "1.High",
+    "type": "Issue",
+    "module": "Payment",
+    "details": "Payment ID1 Cash ไม่แสดงบนหน้าจอ แต่มีอยู่ใน Database ",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-04",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-04T00:00:00Z",
+    "updated_at": "2026-11-04T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE19_1.png",
+        "file_name": "ISSUE19_1.png",
+        "file_size": 63517
+      },
+      {
+        "file_url": "/legacy-images/ISSUE19_2.png",
+        "file_name": "ISSUE19_2.png",
+        "file_size": 13133
+      }
+    ]
+  },
+  {
+    "id": "legacy-20",
+    "log_id": "ISSUE_20",
+    "priority": "1.High",
+    "type": "Issue",
+    "module": "Payment",
+    "details": "Paymentgroup ID0  ไม่แสดงบนหน้าจอ แต่มีอยู่ใน Database",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-04",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-04T00:00:00Z",
+    "updated_at": "2026-11-04T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE20_1.png",
+        "file_name": "ISSUE20_1.png",
+        "file_size": 32731
+      },
+      {
+        "file_url": "/legacy-images/ISSUE20_2.png",
+        "file_name": "ISSUE20_2.png",
+        "file_size": 12272
+      }
+    ]
+  },
+  {
+    "id": "legacy-21",
+    "log_id": "ISSUE_21",
+    "priority": "2.Medium",
+    "type": "Issue",
+    "module": "Product",
+    "details": "ไม่่สามารถนำเข้า Product จาก Excel ได้",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-05",
+    "status": "Test",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-05T00:00:00Z",
+    "updated_at": "2026-11-05T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE21_1.png",
+        "file_name": "ISSUE21_1.png",
+        "file_size": 25573
+      }
+    ]
+  },
+  {
+    "id": "legacy-22",
+    "log_id": "ISSUE_22",
+    "priority": "1.High",
+    "type": "Issue",
+    "module": "Product",
+    "details": "ไม่สามารถสร้าง Product Price Date และ product price Group ได้",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-05",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-05T00:00:00Z",
+    "updated_at": "2026-11-05T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE22_1.png",
+        "file_name": "ISSUE22_1.png",
+        "file_size": 26873
+      },
+      {
+        "file_url": "/legacy-images/ISSUE22_2.png",
+        "file_name": "ISSUE22_2.png",
+        "file_size": 31308
+      }
+    ]
+  },
+  {
+    "id": "legacy-23",
+    "log_id": "ISSUE_23",
+    "priority": "1.High",
+    "type": "Issue",
+    "module": "Product",
+    "details": "ชื่อสินค้าหน่วยพื้นฐานเมื่อบันทึกแล้วกลับมาดูอีกครั้งจะหายไป",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-05",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-05T00:00:00Z",
+    "updated_at": "2026-11-05T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE23_1.png",
+        "file_name": "ISSUE23_1.png",
+        "file_size": 50683
+      }
+    ]
+  },
+  {
+    "id": "legacy-24",
+    "log_id": "ISSUE_24",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Shop",
+    "details": "แกน และชั้น เพิ่มให้รองรับชื่อภาษาอังกฤษ",
+    "raise_by": "Tukta",
+    "raise_date": "2026-11-05",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-05T00:00:00Z",
+    "updated_at": "2026-11-05T00:00:00Z",
+    "images": []
+  },
+  {
+    "id": "legacy-25",
+    "log_id": "ISSUE_25",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Product",
+    "details": "แกน และชั้น เพิ่มให้รองรับชื่อภาษาอังกฤษ",
+    "raise_by": "Tukta",
+    "raise_date": "2026-11-05",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-05T00:00:00Z",
+    "updated_at": "2026-11-05T00:00:00Z",
+    "images": []
+  },
+  {
+    "id": "legacy-26",
+    "log_id": "ISSUE_26",
+    "priority": "1.High",
+    "type": "Issue",
+    "module": "Product",
+    "details": "Export Product to Excel ข้อมูลในไฟล์ไม่ครบถ้วน",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-06",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-06T00:00:00Z",
+    "updated_at": "2026-11-06T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE26_1.png",
+        "file_name": "ISSUE26_1.png",
+        "file_size": 77036
+      },
+      {
+        "file_url": "/legacy-images/ISSUE26_2.png",
+        "file_name": "ISSUE26_2.png",
+        "file_size": 84844
+      }
+    ]
+  },
+  {
+    "id": "legacy-27",
+    "log_id": "ISSUE_27",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Staff",
+    "details": "กรณีกำหนดเป็นแบบ Retail สิทธิ์ใน User Role ที่เกี่ยวกับ Table ต้องไม่แสดง  ",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-09",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-09T00:00:00Z",
+    "updated_at": "2026-11-09T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE27_1.png",
+        "file_name": "ISSUE27_1.png",
+        "file_size": 17560
+      }
+    ]
+  },
+  {
+    "id": "legacy-28",
+    "log_id": "ISSUE_28",
+    "priority": "1.High",
+    "type": "Issue",
+    "module": "Cash In/Cash Out",
+    "details": "Cash In/Out ไม่สามารถเพิ่มใหม่ และ ไม่สามารถแก้ชื่อ",
+    "raise_by": "Kampon",
+    "raise_date": "2026-11-09",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-09T00:00:00Z",
+    "updated_at": "2026-11-09T00:00:00Z",
+    "images": [
+      {
+        "file_url": "/legacy-images/ISSUE28_1.png",
+        "file_name": "ISSUE28_1.png",
+        "file_size": 28966
+      }
+    ]
+  },
+  {
+    "id": "legacy-29",
+    "log_id": "ISSUE_29",
+    "priority": "3.Low",
+    "type": "Issue",
+    "module": "Staff",
+    "details": "หน้าจอเพิ่ม Product เพิ่มสินค้าหน่วยเดียวกัน barcode มากกว่า 1 ยังไม่ได้ ตัวอย่าง สินค้า 43220 MD05/16โออิชิฟรุตโตะ350มลสตรอเมลอน หน่วย Each ที่ Sale Barcode = 8854698009744 และ 8854698010023",
+    "raise_by": "Tukta",
+    "raise_date": "2026-11-09",
+    "status": "Open",
+    "resolution": null,
+    "closed_by": null,
+    "closed_date": null,
+    "closed_version": null,
+    "remark": null,
+    "created_at": "2026-11-09T00:00:00Z",
+    "updated_at": "2026-11-09T00:00:00Z",
+    "images": []
+  }
+]

@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   Search,
+  Filter,
   Flame,
   AlertTriangle,
   Layers,
@@ -12,30 +13,34 @@ import {
   Download,
   Image as ImageIcon,
   User,
-  Code2,
-  Tag,
+  CheckCircle2,
   ArrowUpDown,
+  ListOrdered,
   X,
 } from 'lucide-react';
 import {
-  Requirement,
+  Issue,
   PriorityType,
+  StatusType,
   CORE_FUNCTIONS,
   CoreFunctionType,
   CORE_FUNCTION_META,
   DEFAULT_CORE_FUNCTION,
+  SystemModule,
+  DEFAULT_MODULES_BY_CORE,
 } from '@/types';
-import { getStatusBadgeClass } from '@/lib/status';
-import { PRIORITY_GROUPS, sortRequirementsDoneLast } from '@/lib/requirementSort';
+import { getStatusBadgeClass, STATUS_ORDER } from '@/lib/status';
+import { PRIORITY_GROUPS, sortIssuesClosedLast } from '@/lib/issueSort';
 
 interface PriorityListViewProps {
-  requirements: Requirement[];
-  onSelectRequirement: (requirement: Requirement) => void;
-  onCreateRequirement: (presetCore?: CoreFunctionType, presetModule?: string, presetPriority?: PriorityType) => void;
-  onExportExcel: (targetRequirements: Requirement[], scopeTitle?: string) => void;
+  issues: Issue[];
+  modules?: SystemModule[];
+  onSelectIssue: (issue: Issue) => void;
+  onCreateIssue: (presetCore?: CoreFunctionType, presetModule?: string, presetPriority?: PriorityType) => void;
+  onExportExcel: (targetIssues: Issue[], scopeTitle?: string) => void;
 }
 
-type PrioritySortMode = 'req_id_asc' | 'req_id_desc' | 'status';
+type PrioritySortMode = 'log_id_asc' | 'log_id_desc' | 'status';
 
 function PriorityGroupIcon({ priority }: { priority: PriorityType }) {
   if (priority === '1.High') return <Flame className="w-4 h-4 text-red-600 shrink-0" />;
@@ -44,259 +49,492 @@ function PriorityGroupIcon({ priority }: { priority: PriorityType }) {
 }
 
 export default function PriorityListView({
-  requirements,
-  onSelectRequirement,
-  onCreateRequirement,
+  issues,
+  modules,
+  onSelectIssue,
+  onCreateIssue,
   onExportExcel,
 }: PriorityListViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<PriorityType | 'ALL'>('ALL');
   const [coreFilter, setCoreFilter] = useState<string>('');
+  const [moduleFilter, setModuleFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<PriorityType, boolean>>({
-    '1.High': false,
-    '2.Medium': false,
-    '3.Low': false,
-  });
-  const [sortBy, setSortBy] = useState<PrioritySortMode>('req_id_asc');
+  const [hideClosed, setHideClosed] = useState(false);
+  const [sortBy, setSortBy] = useState<PrioritySortMode>('log_id_desc');
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
-  // Filter requirements
-  const filteredRequirements = useMemo(() => {
-    return requirements.filter((r) => {
-      if (selectedPriority !== 'ALL' && r.priority !== selectedPriority) return false;
-      if (coreFilter && (r.core_function || DEFAULT_CORE_FUNCTION) !== coreFilter) return false;
-      if (statusFilter && r.status !== statusFilter) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matches =
-          r.req_id.toLowerCase().includes(q) ||
-          r.title.toLowerCase().includes(q) ||
-          r.details.toLowerCase().includes(q) ||
-          r.requested_by.toLowerCase().includes(q) ||
-          (r.dev_assigned && r.dev_assigned.toLowerCase().includes(q)) ||
-          r.module.toLowerCase().includes(q);
-        if (!matches) return false;
+  const availableModules = useMemo(() => {
+    const set = new Set<string>();
+
+    if (modules && modules.length > 0) {
+      modules.forEach((m) => {
+        if (!coreFilter || !m.core_function || m.core_function === coreFilter) {
+          if (m.name) set.add(m.name);
+        }
+      });
+    }
+
+    if (coreFilter && DEFAULT_MODULES_BY_CORE[coreFilter as CoreFunctionType]) {
+      DEFAULT_MODULES_BY_CORE[coreFilter as CoreFunctionType].forEach((m) => set.add(m));
+    } else if (!coreFilter) {
+      Object.values(DEFAULT_MODULES_BY_CORE).forEach((list) => {
+        list.forEach((m) => set.add(m));
+      });
+    }
+
+    issues.forEach((i) => {
+      if (!coreFilter || (i.core_function || DEFAULT_CORE_FUNCTION) === coreFilter) {
+        if (i.module) set.add(i.module);
+      }
+    });
+
+    return Array.from(set).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th'));
+  }, [modules, issues, coreFilter]);
+
+  const handleCoreChange = (newCore: string) => {
+    setCoreFilter(newCore);
+    if (moduleFilter && newCore) {
+      const allowedInCore = new Set<string>();
+      if (DEFAULT_MODULES_BY_CORE[newCore as CoreFunctionType]) {
+        DEFAULT_MODULES_BY_CORE[newCore as CoreFunctionType].forEach((m) => allowedInCore.add(m));
+      }
+      if (modules) {
+        modules.filter((m) => m.core_function === newCore).forEach((m) => allowedInCore.add(m.name));
+      }
+      issues
+        .filter((i) => (i.core_function || DEFAULT_CORE_FUNCTION) === newCore)
+        .forEach((i) => {
+          if (i.module) allowedInCore.add(i.module);
+        });
+      if (!allowedInCore.has(moduleFilter)) {
+        setModuleFilter('');
+      }
+    }
+  };
+
+  const baseFilteredIssues = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return issues.filter((item) => {
+      if (hideClosed && item.status === 'Closed') return false;
+      if (coreFilter && (item.core_function || DEFAULT_CORE_FUNCTION) !== coreFilter) return false;
+      if (moduleFilter && item.module !== moduleFilter) return false;
+      if (statusFilter && item.status !== statusFilter) return false;
+      if (q) {
+        const hay = [
+          item.log_id,
+          item.details,
+          item.module,
+          item.core_function || DEFAULT_CORE_FUNCTION,
+          item.resolution || '',
+          item.remark || '',
+          item.raise_by,
+        ]
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [requirements, selectedPriority, coreFilter, statusFilter, searchQuery]);
+  }, [issues, searchQuery, hideClosed, coreFilter, moduleFilter, statusFilter]);
 
-  const toggleCollapse = (priority: PriorityType) => {
+  const groupedData = useMemo(() => {
+    return PRIORITY_GROUPS.map((meta) => {
+      const allItems = sortIssuesClosedLast(
+        baseFilteredIssues.filter((i) => i.priority === meta.value),
+        sortBy
+      );
+      const activeItems = allItems.filter((i) => i.status !== 'Closed');
+      const closedItems = allItems.filter((i) => i.status === 'Closed');
+      return {
+        meta,
+        allItems,
+        activeItems,
+        closedItems,
+      };
+    });
+  }, [baseFilteredIssues, sortBy]);
+
+  const visibleGroups = useMemo(() => {
+    return selectedPriority === 'ALL'
+      ? groupedData
+      : groupedData.filter((g) => g.meta.value === selectedPriority);
+  }, [groupedData, selectedPriority]);
+
+  const flatExportItems = useMemo(() => {
+    return visibleGroups.flatMap((g) => g.allItems);
+  }, [visibleGroups]);
+
+  const totalStats = useMemo(() => {
+    const active = baseFilteredIssues.filter((i) => i.status !== 'Closed').length;
+    const closed = baseFilteredIssues.filter((i) => i.status === 'Closed').length;
+    return { total: baseFilteredIssues.length, active, closed };
+  }, [baseFilteredIssues]);
+
+  const toggleGroupCollapse = (priority: string) => {
     setCollapsedGroups((prev) => ({ ...prev, [priority]: !prev[priority] }));
   };
 
+  const hasFilters = Boolean(
+    searchQuery || coreFilter || moduleFilter || statusFilter || hideClosed || selectedPriority !== 'ALL'
+  );
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setCoreFilter('');
+    setModuleFilter('');
+    setStatusFilter('');
+    setHideClosed(false);
+    setSelectedPriority('ALL');
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Search & Filter Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            placeholder="ค้นหา Req ID, หัวข้อ, หรือ Dev..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500"
-          />
-          {searchQuery && (
+    <div className="space-y-3.5">
+      {/* Compact Top Bar: Quick Color Priority Pills + Filter Controls */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-3.5 space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm sm:text-base font-bold text-[#0C2553] flex items-center gap-1.5 mr-1">
+              <ListOrdered className="w-4 h-4 text-[#0086FF] shrink-0" />
+              แยกตาม Priority (Compact List View)
+            </h2>
+
+            {/* Quick Priority Switcher Pills */}
             <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+              type="button"
+              onClick={() => setSelectedPriority('ALL')}
+              className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-all ${
+                selectedPriority === 'ALL'
+                  ? 'bg-[#0086FF] text-white border-[#0086FF] shadow-2xs'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+              }`}
             >
-              <X className="w-3.5 h-3.5" />
+              ทั้งหมด ({totalStats.total})
             </button>
-          )}
+
+            {groupedData.map(({ meta, allItems, activeItems }) => {
+              const isSelected = selectedPriority === meta.value;
+              return (
+                <button
+                  key={meta.value}
+                  type="button"
+                  onClick={() =>
+                    setSelectedPriority((prev) => (prev === meta.value ? 'ALL' : meta.value))
+                  }
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all ${
+                    isSelected
+                      ? meta.summaryActiveClass
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <PriorityGroupIcon priority={meta.value} />
+                  <span>{meta.shortLabel}</span>
+                  <span className={`px-1.5 py-0 rounded-full text-[11px] border ${meta.pillBadgeClass}`}>
+                    {activeItems.length}/{allItems.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                const parts: string[] = [];
+                if (selectedPriority !== 'ALL') parts.push(selectedPriority);
+                if (coreFilter) parts.push(coreFilter);
+                if (moduleFilter) parts.push(moduleFilter);
+                if (statusFilter) parts.push(statusFilter);
+                const scopeTitle = parts.length > 0 ? parts.join(' - ') : 'Priority List View';
+                onExportExcel(flatExportItems, scopeTitle);
+              }}
+              disabled={flatExportItems.length === 0}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export ({flatExportItems.length})
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onCreateIssue(
+                  coreFilter ? (coreFilter as CoreFunctionType) : undefined,
+                  moduleFilter || undefined,
+                  selectedPriority !== 'ALL' ? selectedPriority : undefined
+                )
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#0C2553] bg-[#FFCB06] hover:bg-[#F5C000] border border-[#E5B300] rounded-xl shadow-xs transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              แจ้งปัญหาใหม่
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {/* Priority filter */}
-          <select
-            value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value as PriorityType | 'ALL')}
-            className="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium"
-          >
-            <option value="ALL">ทุก Priority</option>
-            <option value="1.High">1.High</option>
-            <option value="2.Medium">2.Medium</option>
-            <option value="3.Low">3.Low</option>
-          </select>
+        {/* Compact Single-Row Filter Strip */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ค้นหา Issue No, รายละเอียด, Module, ผู้แจ้ง..."
+              className="w-full pl-8 pr-3 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-indigo-400 focus:outline-none"
+            />
+          </div>
 
-          {/* Core Function filter */}
+          <div className="flex items-center gap-1 text-xs">
+            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <select
+              value={coreFilter}
+              onChange={(e) => handleCoreChange(e.target.value)}
+              className="py-1 px-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:border-indigo-400 focus:outline-none"
+            >
+              <option value="">ทุกกลุ่มหลัก</option>
+              {CORE_FUNCTIONS.map((cf) => (
+                <option key={cf} value={cf}>
+                  {cf}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <select
-            value={coreFilter}
-            onChange={(e) => setCoreFilter(e.target.value)}
-            className="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium"
+            value={moduleFilter}
+            onChange={(e) => setModuleFilter(e.target.value)}
+            className="py-1 px-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:border-indigo-400 focus:outline-none"
           >
-            <option value="">ทุก Core Function</option>
-            {CORE_FUNCTIONS.map((cf) => (
-              <option key={cf} value={cf}>
-                {cf}
+            <option value="">ทุกกลุ่มย่อย</option>
+            {availableModules.map((mod) => (
+              <option key={mod} value={mod}>
+                {mod}
               </option>
             ))}
           </select>
 
-          {/* Sort button */}
-          <button
-            type="button"
-            onClick={() => {
-              setSortBy((prev) =>
-                prev === 'req_id_asc'
-                  ? 'req_id_desc'
-                  : prev === 'req_id_desc'
-                  ? 'status'
-                  : 'req_id_asc'
-              );
-            }}
-            className="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium flex items-center gap-1 text-slate-700 hover:bg-slate-100"
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="py-1 px-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:border-indigo-400 focus:outline-none"
           >
-            <ArrowUpDown className="w-3.5 h-3.5" />
-            {sortBy === 'req_id_asc'
-              ? 'รหัส (น้อย ➔ มาก)'
-              : sortBy === 'req_id_desc'
-              ? 'รหัส (มาก ➔ น้อย)'
-              : 'เรียงตามสถานะ'}
-          </button>
+            <option value="">ทุกสถานะ</option>
+            {STATUS_ORDER.map((st: StatusType) => (
+              <option key={st} value={st}>
+                {st}
+              </option>
+            ))}
+          </select>
 
-          <button
-            type="button"
-            onClick={() => onExportExcel(filteredRequirements, 'Priority View')}
-            className="px-3 py-2 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl font-semibold hover:bg-emerald-100 flex items-center gap-1"
-          >
-            <Download className="w-3.5 h-3.5" /> Export Excel
-          </button>
+          <div className="flex items-center gap-1 text-xs">
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as PrioritySortMode)}
+              className="py-1 px-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:border-indigo-400 focus:outline-none"
+            >
+              <option value="log_id_desc">เรียง Issue No (มาก ➔ น้อย / ล่าสุดก่อน Z-A)</option>
+              <option value="log_id_asc">เรียง Issue No (น้อย ➔ มาก / A-Z)</option>
+              <option value="status">เรียงตามสถานะ</option>
+            </select>
+          </div>
+
+          <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 cursor-pointer hover:bg-slate-100 select-none">
+            <input
+              type="checkbox"
+              checked={hideClosed}
+              onChange={(e) => setHideClosed(e.target.checked)}
+              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span>ซ่อน Closed</span>
+          </label>
+
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors"
+            >
+              <X className="w-3 h-3" />
+              ล้างตัวกรอง
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Priority Groups */}
-      <div className="space-y-6">
-        {PRIORITY_GROUPS.map((group) => {
-          if (selectedPriority !== 'ALL' && selectedPriority !== group.value) return null;
-
-          const groupItems = sortRequirementsDoneLast(
-            filteredRequirements.filter((r) => r.priority === group.value),
-            sortBy
-          );
-          const isCollapsed = collapsedGroups[group.value];
+      {/* Color-Coded Compact List View Cards (High=Red, Medium=Amber, Low=Sky) */}
+      <div className="space-y-3.5">
+        {visibleGroups.map(({ meta, allItems, activeItems, closedItems }) => {
+          const isCollapsed = Boolean(collapsedGroups[meta.value]);
 
           return (
             <div
-              key={group.value}
-              className={`rounded-2xl border ${group.containerClass} p-5 shadow-sm space-y-4`}
+              key={meta.value}
+              className={`${meta.containerClass} rounded-2xl p-3.5 sm:p-4 border shadow-sm space-y-2.5`}
             >
-              {/* Group Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <PriorityGroupIcon priority={group.value} />
-                  <div>
-                    <h3 className={`text-sm font-bold ${group.titleClass}`}>{group.label}</h3>
-                    <p className={`text-xs ${group.subtitleClass}`}>
-                      {groupItems.length} รายการ (เสร็จแล้ว{' '}
-                      {groupItems.filter((i) => i.status === 'Done').length} รายการ)
-                    </p>
-                  </div>
+              {/* Header Strip matching Dashboard Compact List View */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className={`text-sm font-extrabold flex items-center gap-1.5 ${meta.titleClass}`}>
+                    <PriorityGroupIcon priority={meta.value} />
+                    {meta.label}
+                  </h3>
+                  <span className={`hidden lg:inline text-[11px] ${meta.subtitleClass}`}>
+                    • คลิกที่รายการเพื่อดูรายละเอียดหรืออัปเดต
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[11px] font-extrabold border px-2.5 py-0.5 rounded-full ${meta.countPillClass}`}>
+                    {allItems.length} รายการ
+                  </span>
                   <button
                     type="button"
-                    onClick={() => onCreateRequirement(undefined, undefined, group.value)}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg border flex items-center gap-1 ${group.controlBtnClass}`}
+                    onClick={() => onExportExcel(allItems, `Priority ${meta.value}`)}
+                    disabled={allItems.length === 0}
+                    className={`inline-flex items-center gap-1 text-[11px] font-semibold border px-2 py-0.5 rounded-full transition-colors disabled:opacity-40 ${meta.controlBtnClass}`}
+                    title={`Export รายการระดับ ${meta.value}`}
                   >
-                    <Plus className="w-3 h-3" /> เพิ่ม {group.shortLabel}
+                    <Download className="w-3 h-3" />
+                    Excel
                   </button>
                   <button
                     type="button"
-                    onClick={() => toggleCollapse(group.value)}
-                    className={`p-1.5 rounded-lg border ${group.controlBtnClass}`}
+                    onClick={() => toggleGroupCollapse(meta.value)}
+                    className={`inline-flex items-center gap-1 text-[11px] font-semibold border px-2 py-0.5 rounded-full transition-colors ${meta.controlBtnClass}`}
                   >
                     {isCollapsed ? (
-                      <ChevronDown className="w-4 h-4" />
+                      <>
+                        แสดง <ChevronDown className="w-3 h-3" />
+                      </>
                     ) : (
-                      <ChevronUp className="w-4 h-4" />
+                      <>
+                        ย่อ <ChevronUp className="w-3 h-3" />
+                      </>
                     )}
                   </button>
                 </div>
               </div>
 
-              {/* Items Table / Cards */}
+              {/* Compact White List Container */}
               {!isCollapsed && (
-                <div className={`rounded-xl border overflow-hidden ${group.innerBoxClass}`}>
-                  {groupItems.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-slate-400">
-                      ไม่มี Requirement ในระดับความสำคัญนี้
+                allItems.length === 0 ? (
+                  <div className={`${meta.innerBoxClass} rounded-xl border px-4 py-5 text-center text-xs text-slate-400`}>
+                    ไม่พบรายการปัญหาในระดับ {meta.shortLabel} ตามเงื่อนไขที่เลือก
+                  </div>
+                ) : (
+                  <div className={`${meta.innerBoxClass} rounded-xl border overflow-hidden`}>
+                    {/* Compact Column Header */}
+                    <div className={`hidden md:grid md:grid-cols-12 gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${meta.tableHeaderClass}`}>
+                      <div className="col-span-2">Issue No</div>
+                      <div className="col-span-3">กลุ่มหลัก / กลุ่มย่อย</div>
+                      <div className="col-span-5">รายละเอียดปัญหา</div>
+                      <div className="col-span-1">ผู้แจ้ง</div>
+                      <div className="col-span-1 text-right">สถานะ</div>
                     </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {groupItems.map((req) => {
-                        const coreMeta =
-                          CORE_FUNCTION_META[
-                            (req.core_function as CoreFunctionType) || DEFAULT_CORE_FUNCTION
-                          ] || CORE_FUNCTION_META[DEFAULT_CORE_FUNCTION];
+
+                    <div className={`divide-y ${meta.divideClass}`}>
+                      {allItems.map((issue, idx) => {
+                        const isClosed = issue.status === 'Closed';
+                        const isFirstClosed = isClosed && (idx === 0 || allItems[idx - 1]?.status !== 'Closed');
+                        const coreFn = (issue.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType;
+                        const coreMeta = CORE_FUNCTION_META[coreFn] || CORE_FUNCTION_META[DEFAULT_CORE_FUNCTION];
+                        const statusColor = getStatusBadgeClass(issue.status);
 
                         return (
-                          <div
-                            key={req.id}
-                            onClick={() => onSelectRequirement(req)}
-                            className="p-4 hover:bg-slate-50 transition-colors cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group"
-                          >
-                            <div className="space-y-1.5 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-mono text-xs font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-100">
-                                  {req.req_id}
-                                </span>
-                                <span
-                                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(
-                                    req.status
-                                  )}`}
-                                >
-                                  {req.status}
-                                </span>
-                                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                  {req.type}
-                                </span>
-                                <span
-                                  className={`text-[10px] font-medium px-2 py-0.5 rounded border ${coreMeta.badgeBg} ${coreMeta.badgeText} ${coreMeta.badgeBorder}`}
-                                >
-                                  {req.core_function || DEFAULT_CORE_FUNCTION}
-                                </span>
-                                <span className="text-[10px] text-slate-500 font-medium">
-                                  {req.module}
+                          <React.Fragment key={issue.id}>
+                            {isFirstClosed && activeItems.length > 0 && (
+                              <div className="px-3 py-1 bg-slate-50/95 border-y border-slate-200/80 flex items-center gap-1.5 text-[10px] font-bold text-emerald-700">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                ปิดงานแล้ว (Closed) — {closedItems.length} รายการ
+                              </div>
+                            )}
+
+                            <div
+                              onClick={() => onSelectIssue(issue)}
+                              className={`px-3 py-1.5 transition-colors cursor-pointer group grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-2 items-center text-xs ${
+                                isClosed
+                                  ? 'bg-slate-50/75 opacity-65 hover:opacity-100 hover:bg-slate-100/80'
+                                  : meta.rowHoverClass
+                              }`}
+                            >
+                              {/* Issue No + Attachment Count */}
+                              <div className="md:col-span-2 flex items-center justify-between md:justify-start gap-1.5">
+                                <div className="flex items-center gap-1 min-w-0">
+                                  <span
+                                    className={`font-mono text-[11px] font-extrabold px-2 py-0.5 rounded-md border transition-colors shrink-0 ${
+                                      isClosed
+                                        ? 'text-slate-600 bg-slate-100 border-slate-200 group-hover:bg-slate-600 group-hover:border-slate-600 group-hover:text-white'
+                                        : meta.logIdBadgeClass
+                                    }`}
+                                  >
+                                    {issue.log_id}
+                                  </span>
+                                  {issue.images && issue.images.length > 0 && (
+                                    <span
+                                      className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded border border-indigo-100 flex items-center gap-0.5 shrink-0"
+                                      title={`${issue.images.length} รูปภาพประกอบ`}
+                                    >
+                                      <ImageIcon className="w-2.5 h-2.5" />
+                                      {issue.images.length}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <span className={`md:hidden text-[10px] font-bold px-1.5 py-0.5 rounded border ${statusColor}`}>
+                                  {issue.status}
                                 </span>
                               </div>
 
-                              <h4 className="text-xs font-bold text-slate-900 group-hover:text-sky-600 transition-colors">
-                                {req.title}
-                              </h4>
-                              <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                                {req.details}
-                              </p>
-                            </div>
-
-                            <div className="flex sm:flex-col items-end justify-between sm:justify-center gap-1.5 shrink-0 text-right w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
-                              <div className="flex items-center gap-2">
-                                {req.dev_assigned && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-100">
-                                    <Code2 className="w-2.5 h-2.5" />
-                                    {req.dev_assigned}
-                                  </span>
-                                )}
-                                {req.target_version && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100">
-                                    <Tag className="w-2.5 h-2.5" />
-                                    {req.target_version}
-                                  </span>
-                                )}
+                              {/* Core Function & Module inline compact pills */}
+                              <div className="md:col-span-3 flex items-center gap-1 min-w-0">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${coreMeta.badgeBg} ${coreMeta.badgeText} ${coreMeta.badgeBorder}`}>
+                                  {coreMeta.shortName}
+                                </span>
+                                <span className="text-[11px] font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 truncate">
+                                  {issue.module}
+                                </span>
                               </div>
-                              <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                                <User className="w-3 h-3" /> {req.requested_by}
-                              </span>
+
+                              {/* Single-line Details */}
+                              <div className="md:col-span-5 min-w-0">
+                                <p
+                                  className={`text-[13px] leading-snug font-medium truncate ${
+                                    isClosed ? 'text-slate-500' : `text-slate-800 ${meta.detailHoverClass}`
+                                  }`}
+                                  title={issue.details}
+                                >
+                                  {issue.details}
+                                </p>
+                              </div>
+
+                              {/* Reporter */}
+                              <div
+                                className="md:col-span-1 flex items-center gap-1 text-[11px] text-slate-600 truncate"
+                                title={
+                                  issue.raise_date
+                                    ? `แจ้งเมื่อ ${new Date(issue.raise_date).toLocaleDateString('th-TH')}`
+                                    : ''
+                                }
+                              >
+                                <User className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span className="truncate">{issue.raise_by}</span>
+                              </div>
+
+                              {/* Desktop Status */}
+                              <div className="hidden md:flex md:col-span-1 items-center justify-end">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border whitespace-nowrap ${statusColor}`}>
+                                  {issue.status}
+                                </span>
+                              </div>
                             </div>
-                          </div>
+                          </React.Fragment>
                         );
                       })}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )
               )}
             </div>
           );

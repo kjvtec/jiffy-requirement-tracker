@@ -1,4 +1,4 @@
-import { Requirement, PriorityType } from '@/types';
+import { Issue, PriorityType } from '@/types';
 
 export interface PriorityGroupMeta {
   value: PriorityType;
@@ -22,7 +22,7 @@ export interface PriorityGroupMeta {
 export const PRIORITY_GROUPS: PriorityGroupMeta[] = [
   {
     value: '1.High',
-    label: 'High Priority Requirements (1.High — สำคัญมาก / เร่งด่วน)',
+    label: 'High Priority Issues (1.High — ความสำคัญสูง / เร่งด่วน)',
     shortLabel: '1.High',
     containerClass: 'bg-gradient-to-br from-red-50/90 via-rose-50/70 to-orange-50/50 border-red-200/90',
     titleClass: 'text-red-950',
@@ -40,7 +40,7 @@ export const PRIORITY_GROUPS: PriorityGroupMeta[] = [
   },
   {
     value: '2.Medium',
-    label: 'Medium Priority Requirements (2.Medium — สำคัญปานกลาง)',
+    label: 'Medium Priority Issues (2.Medium — ความสำคัญปานกลาง)',
     shortLabel: '2.Medium',
     containerClass: 'bg-gradient-to-br from-amber-50/90 via-yellow-50/65 to-orange-50/40 border-amber-200/90',
     titleClass: 'text-amber-950',
@@ -58,7 +58,7 @@ export const PRIORITY_GROUPS: PriorityGroupMeta[] = [
   },
   {
     value: '3.Low',
-    label: 'Low Priority Requirements (3.Low — สำคัญน้อย / ปรับปรุงเพิ่มเติม)',
+    label: 'Low Priority Issues (3.Low — ความสำคัญต่ำ)',
     shortLabel: '3.Low',
     containerClass: 'bg-gradient-to-br from-sky-50/90 via-blue-50/65 to-indigo-50/40 border-sky-200/90',
     titleClass: 'text-sky-950',
@@ -76,27 +76,27 @@ export const PRIORITY_GROUPS: PriorityGroupMeta[] = [
   },
 ];
 
-export function parseReqNumber(reqId: string): number {
-  return parseInt(reqId.replace(/\D/g, '') || '0', 10);
+export function parseIssueNumber(logId: string): number {
+  return parseInt(logId.replace(/\D/g, '') || '0', 10);
 }
 
-/** Sort requirements with non-Done items first, Done items always at the bottom. */
-export function sortRequirementsDoneLast(
-  list: Requirement[],
-  sortBy: 'req_id_asc' | 'req_id_desc' | 'status' = 'req_id_asc'
-): Requirement[] {
+/** Sort issues with non-Closed items first, Closed items always at the bottom. */
+export function sortIssuesClosedLast(
+  list: Issue[],
+  sortBy: 'log_id_asc' | 'log_id_desc' | 'status' = 'log_id_asc'
+): Issue[] {
   return [...list].sort((a, b) => {
-    const isDoneA = a.status === 'Done' ? 1 : 0;
-    const isDoneB = b.status === 'Done' ? 1 : 0;
-    if (isDoneA !== isDoneB) return isDoneA - isDoneB;
+    const isClosedA = a.status === 'Closed' ? 1 : 0;
+    const isClosedB = b.status === 'Closed' ? 1 : 0;
+    if (isClosedA !== isClosedB) return isClosedA - isClosedB;
 
     if (sortBy === 'status') {
       const cmp = a.status.localeCompare(b.status);
       if (cmp !== 0) return cmp;
     }
 
-    const numA = parseReqNumber(a.req_id);
-    const numB = parseReqNumber(b.req_id);
-    return sortBy === 'req_id_desc' ? numB - numA : numA - numB;
+    const numA = parseIssueNumber(a.log_id);
+    const numB = parseIssueNumber(b.log_id);
+    return sortBy === 'log_id_desc' ? numB - numA : numA - numB;
   });
 }
