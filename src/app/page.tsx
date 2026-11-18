@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { AlertTriangle, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import {
@@ -63,6 +63,25 @@ export default function HomePage() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  /**
+   * Deleting is protected: a normal click only shows a "no permission" warning.
+   * Clicking delete 5 times in a row on the same requirement (each within 4 seconds
+   * of the previous click) opens the confirmation dialog.
+   */
+  const deleteClicks = useRef<{ id: string; count: number; at: number }>({ id: '', count: 0, at: 0 });
+  const requestDelete = (id: string) => {
+    const now = Date.now();
+    const c = deleteClicks.current;
+    deleteClicks.current =
+      c.id === id && now - c.at <= 4000 ? { id, count: c.count + 1, at: now } : { id, count: 1, at: now };
+    if (deleteClicks.current.count >= 5) {
+      deleteClicks.current = { id: '', count: 0, at: 0 };
+      setDeleteId(id);
+      return;
+    }
+    t.pushToast('error', 'ไม่มีสิทธิ์ลบ Requirement กรุณาติดต่อผู้ดูแลระบบ');
+  };
 
   // Excel export
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number; message: string } | null>(null);
@@ -282,7 +301,7 @@ export default function HomePage() {
                 onSelectModule={setExplorerModule}
                 onSelectRequirement={(r) => setDetailId(r.id)}
                 onEditRequirement={openEdit}
-                onDeleteRequirement={setDeleteId}
+                onDeleteRequirement={requestDelete}
                 onCreateRequirement={(core, module) => openCreate({ core, module })}
                 onExportExcel={handleExportExcel}
                 onAddModule={t.addModule}
@@ -353,7 +372,7 @@ export default function HomePage() {
         developers={t.developers}
         rememberedName={t.lastName}
         onEdit={openEdit}
-        onDelete={setDeleteId}
+        onDelete={requestDelete}
         onStatusChange={t.changeStatus}
         onAssignDev={handleAssignDev}
         onRequestInfo={handleRequestInfo}
