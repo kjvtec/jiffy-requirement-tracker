@@ -279,7 +279,7 @@ export default function RequirementDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-4xl w-full border border-line shadow-pop overflow-hidden my-8 max-h-[92vh] flex flex-col">
+      <div className="bg-white rounded-2xl max-w-[1280px] w-[96vw] h-[94vh] border border-line shadow-pop overflow-hidden my-2 flex flex-col">
         {/* Header */}
         <div
           className="bg-gradient-to-r from-jiffy-navy to-[#0a5fc4] p-5 text-white flex items-center justify-between gap-3 shrink-0"
@@ -356,7 +356,7 @@ export default function RequirementDetailModal({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6 overflow-y-auto flex-1 text-sm text-slate-700">
+        <div className="p-6 lg:p-8 space-y-7 overflow-y-auto flex-1 text-base text-slate-700">
           {/* Dev is waiting for more information */}
           {needsInfo && (
             <div className="need-info-beacon rounded-xl border-2 p-4 space-y-3">
