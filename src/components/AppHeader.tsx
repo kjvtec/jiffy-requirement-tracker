@@ -78,21 +78,12 @@ export default function AppHeader({
                 href={ISSUE_TRACKER_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative inline-flex items-center gap-2 px-3.5 h-9 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-rose-600 via-red-600 to-rose-600 hover:from-rose-500 hover:to-red-500 pulse-glow-rose hover:scale-[1.03] active:scale-95 transition-all duration-200 overflow-hidden group border border-rose-400/40"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 h-9 rounded-xl text-xs sm:text-sm font-semibold text-rose-700 bg-rose-50/70 hover:bg-rose-100 border border-rose-200/80 hover:border-rose-300 shadow-2xs transition-all hover:scale-[1.02] active:scale-95"
                 title="เปิด Issue Tracker (https://issue-log-hq.vercel.app/)"
               >
-                {/* Light shimmer sweep effect */}
-                <span
-                  aria-hidden
-                  className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-btn-shimmer pointer-events-none"
-                />
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-90"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-300"></span>
-                </span>
-                <Bug className="w-4 h-4 text-white relative transition-transform duration-200 group-hover:rotate-12 group-hover:scale-110" aria-hidden />
-                <span className="relative tracking-wide">Issue Tracker</span>
-                <ExternalLink className="w-3.5 h-3.5 text-white/90 relative hidden sm:inline-block" aria-hidden />
+                <Bug className="w-4 h-4 text-rose-600 shrink-0" aria-hidden />
+                <span>Issue Tracker</span>
+                <ExternalLink className="w-3.5 h-3.5 text-rose-400 shrink-0 hidden sm:inline-block" aria-hidden />
               </a>
 
               <a
