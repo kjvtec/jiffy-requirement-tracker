@@ -1,65 +1,65 @@
-import { StatusType } from '@/types';
+import { RequirementStatusType } from '@/types';
 
 export interface StatusMeta {
-  value: StatusType;
+  value: RequirementStatusType;
   label: string;
   shortTh: string;
   badgeClass: string;
   dotClass: string;
 }
 
-export const STATUS_ORDER: StatusType[] = [
-  'Open',
-  'Need Info',
-  'In Progress',
-  'Test',
-  'Closed',
+export const STATUS_ORDER: RequirementStatusType[] = [
+  'Draft',
+  'In Review',
+  'In Development',
+  'Testing',
+  'Done',
 ];
 
-export const STATUS_META: Record<StatusType, StatusMeta> = {
-  Open: {
-    value: 'Open',
-    label: 'Open',
-    shortTh: 'รอแก้ไข',
-    badgeClass: 'bg-yellow-50 text-yellow-800 border-yellow-200',
-    dotClass: 'bg-amber-400',
+export const STATUS_META: Record<RequirementStatusType, StatusMeta> = {
+  Draft: {
+    value: 'Draft',
+    label: 'Draft',
+    shortTh: 'ร่างข้อกำหนด',
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-300',
+    dotClass: 'bg-slate-400',
   },
-  'Need Info': {
-    value: 'Need Info',
-    label: 'Need Info',
-    shortTh: 'รอข้อมูลเพิ่ม',
-    badgeClass: 'bg-orange-50 text-orange-800 border-orange-300',
-    dotClass: 'bg-orange-500',
+  'In Review': {
+    value: 'In Review',
+    label: 'In Review',
+    shortTh: 'รอตรวจทาน/ประเมิน',
+    badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
+    dotClass: 'bg-amber-500',
   },
-  'In Progress': {
-    value: 'In Progress',
-    label: 'In Progress',
-    shortTh: 'กำลังแก้ไข',
-    badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
-    dotClass: 'bg-violet-400',
+  'In Development': {
+    value: 'In Development',
+    label: 'In Development',
+    shortTh: 'Dev กำลังพัฒนา',
+    badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    dotClass: 'bg-indigo-500',
   },
-  Test: {
-    value: 'Test',
+  Testing: {
+    value: 'Testing',
     label: 'Ready for Test',
-    shortTh: 'รอทดสอบ',
-    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
-    dotClass: 'bg-sky-400',
+    shortTh: 'กำลังทดสอบ/UAT',
+    badgeClass: 'bg-sky-50 text-sky-700 border-sky-200',
+    dotClass: 'bg-sky-500',
   },
-  Closed: {
-    value: 'Closed',
-    label: 'Closed',
-    shortTh: 'ปิดงานแล้ว',
+  Done: {
+    value: 'Done',
+    label: 'Done / Released',
+    shortTh: 'เสร็จสมบูรณ์',
     badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    dotClass: 'bg-emerald-400',
+    dotClass: 'bg-emerald-500',
   },
 };
 
 export function getStatusBadgeClass(status: string): string {
-  const meta = STATUS_META[status as StatusType];
+  const meta = STATUS_META[status as RequirementStatusType];
   return meta ? meta.badgeClass : 'bg-slate-50 text-slate-700 border-slate-200';
 }
 
 export function getStatusShortTh(status: string): string {
-  const meta = STATUS_META[status as StatusType];
+  const meta = STATUS_META[status as RequirementStatusType];
   return meta ? meta.shortTh : status;
 }

@@ -11,9 +11,16 @@ interface ImageUploaderProps {
   onChange: (images: IssueImage[]) => void;
   issueLogId?: string;
   title?: string;
+  bucketName?: string;
 }
 
-export default function ImageUploader({ images, onChange, issueLogId, title = 'รูปภาพประกอบปัญหา' }: ImageUploaderProps) {
+export default function ImageUploader({
+  images,
+  onChange,
+  issueLogId,
+  title = 'รูปภาพประกอบ Wireframe / Mockup',
+  bucketName = 'requirement-attachments',
+}: ImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -59,7 +66,7 @@ export default function ImageUploader({ images, onChange, issueLogId, title = '�
         const ext = file.name.split('.').pop() || 'png';
         const filePath = `${cleanLogId}/${timestamp}_${randomStr}.${ext}`;
 
-        let targetBucket = 'requirement-attachments';
+        let targetBucket = bucketName || 'requirement-attachments';
         let { error: uploadError } = await supabase.storage
           .from(targetBucket)
           .upload(filePath, compressedFile, {

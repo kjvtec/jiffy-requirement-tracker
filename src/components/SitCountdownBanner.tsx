@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import type { Issue } from '@/types';
+import type { Requirement } from '@/types';
 import {
   Activity,
   AlertTriangle,
@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 
 interface SitCountdownBannerProps {
-  issues: Issue[];
+  issues?: Requirement[];
+  requirements?: Requirement[];
 }
 
 const START_DATE_STR = '2026-10-19'; // 19 ต.ค. 2569
@@ -44,7 +45,9 @@ function getBangkokTodayYmd(): string {
 
 type RiskLevel = 'green' | 'yellow' | 'red';
 
-export default function SitCountdownBanner({ issues }: SitCountdownBannerProps) {
+export default function SitCountdownBanner({ issues, requirements }: SitCountdownBannerProps) {
+  const dataList = requirements || issues || [];
+
   const timeline = useMemo(() => {
     const totalDays = Math.max(1, diffDays(START_DATE_STR, SIT_DATE_STR)); // 77 days
     const todayYmd = getBangkokTodayYmd();
@@ -53,14 +56,14 @@ export default function SitCountdownBanner({ issues }: SitCountdownBannerProps) 
     const remainingDays = Math.max(0, totalDays - elapsedDays);
     const timePct = Math.round((elapsedDays / totalDays) * 100);
 
-    const totalIssues = issues.length;
-    const closedIssues = issues.filter((i) => i.status === 'Closed').length;
-    const openIssues = totalIssues - closedIssues;
-    const highOpen = issues.filter(
-      (i) => i.priority === '1.High' && i.status !== 'Closed'
+    const totalReqs = dataList.length;
+    const doneReqs = dataList.filter((i) => i.status === 'Done' || (i.status as string) === 'Closed').length;
+    const pendingReqs = totalReqs - doneReqs;
+    const highPending = dataList.filter(
+      (i) => i.priority === '1.High' && i.status !== 'Done' && (i.status as string) !== 'Closed'
     ).length;
-    const resolutionPct =
-      totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
+    const completionPct =
+      totalReqs > 0 ? Math.round((doneReqs / totalReqs) * 100) : 0;
 
     // 3-Zone breakdown across 77-day pre-SIT timeline
     const greenZonePct = (42 / totalDays) * 100;
@@ -70,13 +73,13 @@ export default function SitCountdownBanner({ issues }: SitCountdownBannerProps) 
     let overallRisk: RiskLevel = 'green';
     if (
       remainingDays <= 15 ||
-      (remainingDays <= 35 && (highOpen >= 5 || timePct - resolutionPct >= 30))
+      (remainingDays <= 35 && (highPending >= 5 || timePct - completionPct >= 30))
     ) {
       overallRisk = 'red';
     } else if (
       remainingDays <= 35 ||
-      highOpen >= 4 ||
-      (timePct - resolutionPct >= 20 && openIssues > 0)
+      highPending >= 4 ||
+      (timePct - completionPct >= 20 && pendingReqs > 0)
     ) {
       overallRisk = 'yellow';
     }
@@ -90,276 +93,228 @@ export default function SitCountdownBanner({ issues }: SitCountdownBannerProps) 
       yellowZonePct,
       redZonePct,
       overallRisk,
-      totalIssues,
-      closedIssues,
-      openIssues,
-      highOpen,
-      resolutionPct,
+      totalReqs,
+      doneReqs,
+      pendingReqs,
+      highPending,
+      completionPct,
     };
-  }, [issues]);
+  }, [dataList]);
 
-  const riskConfig = {
-    green: {
-      glowClass: 'sit-glow-green',
-      borderClass: 'border-[#164E9E]/60 border-l-emerald-400',
-      pillClass: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/35',
-      countdownBox: 'bg-emerald-500/15 border-emerald-400/35',
-      countdownNum: 'text-emerald-300',
-      iconTone: 'text-emerald-300',
-      fillGradient: 'from-emerald-400 to-teal-400',
-      dotBorder: 'border-emerald-600',
-      label: 'ปกติ • ระยะปลอดภัย',
-      subLabel: 'เวลาและงานคงค้างอยู่ในเกณฑ์ควบคุมได้',
-      Icon: ShieldCheck,
-    },
-    yellow: {
-      glowClass: 'sit-glow-yellow',
-      borderClass: 'border-[#164E9E]/60 border-l-[#FFCB06]',
-      pillClass: 'bg-[#FFCB06]/15 text-amber-100 border-[#FFCB06]/45',
-      countdownBox: 'bg-[#FFCB06]/15 border-[#FFCB06]/45',
-      countdownNum: 'text-[#FFCB06]',
-      iconTone: 'text-[#FFCB06]',
-      fillGradient: 'from-emerald-400 via-[#FFCB06] to-amber-300',
-      dotBorder: 'border-amber-500',
-      label: 'เฝ้าระวัง • เร่งปิดงาน',
-      subLabel: `มี High Priority ค้าง ${timeline.highOpen} เรื่อง — ควรเร่งแก้ไขก่อนเข้าช่วงท้าย`,
-      Icon: AlertTriangle,
-    },
-    red: {
-      glowClass: 'sit-glow-red',
-      borderClass: 'border-[#164E9E]/60 border-l-[#EB1C24]',
-      pillClass: 'bg-[#EB1C24]/20 text-rose-100 border-[#EB1C24]/50',
-      countdownBox: 'bg-[#EB1C24]/20 border-[#EB1C24]/50',
-      countdownNum: 'text-rose-300',
-      iconTone: 'text-rose-300',
-      fillGradient: 'from-emerald-400 via-[#FFCB06] to-[#EB1C24]',
-      dotBorder: 'border-rose-600',
-      label: 'เร่งด่วน • เข้าช่วงวิกฤต SIT',
-      subLabel: `เหลือเวลาจำกัด ${timeline.remainingDays} วัน ต้องเคลียร์เคสสำคัญทันที`,
-      Icon: Flame,
-    },
-  }[timeline.overallRisk];
+  const riskBadge = useMemo(() => {
+    switch (timeline.overallRisk) {
+      case 'red':
+        return {
+          title: 'วิกฤต • ต้องเร่งด่วน',
+          desc: 'เหลือเวลาไม่มาก หรือมี High Priority คงค้างสูง',
+          textColor: 'text-rose-400',
+          borderColor: 'border-rose-500/40',
+          bgBadge: 'bg-rose-500/10',
+          icon: AlertTriangle,
+          ledActive: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.9)]',
+        };
+      case 'yellow':
+        return {
+          title: 'เฝ้าระวัง • ต้องเร่งสปีด',
+          desc: 'อัตราการเสร็จช้ากว่าเวลาที่ผ่าน หรือ High Priority ค้างปานกลาง',
+          textColor: 'text-amber-300',
+          borderColor: 'border-amber-500/40',
+          bgBadge: 'bg-amber-500/10',
+          icon: Clock,
+          ledActive: 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]',
+        };
+      case 'green':
+      default:
+        return {
+          title: 'ปกติ • ระยะปลอดภัย',
+          desc: 'เวลาและงานคงค้างอยู่ในเกณฑ์ควบคุมได้',
+          textColor: 'text-emerald-300',
+          borderColor: 'border-emerald-500/40',
+          bgBadge: 'bg-emerald-500/10',
+          icon: ShieldCheck,
+          ledActive: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]',
+        };
+    }
+  }, [timeline.overallRisk]);
 
-  const RiskIcon = riskConfig.Icon;
+  const RiskIcon = riskBadge.icon;
 
   return (
-    <section
-      aria-label="SIT Readiness Countdown"
-      className={`relative overflow-hidden rounded-2xl border border-l-4 ${riskConfig.borderClass} ${riskConfig.glowClass} bg-gradient-to-br from-[#081A3A] via-[#0C2553] to-[#044492] text-white px-4 py-3.5 sm:px-5 sm:py-4 transition-all`}
-    >
-      {/* Subtle Jiffy Blue & Yellow Ambient Accent (radial gradient without blur filter overhead) */}
-      <div className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(0,134,255,0.22)_0%,transparent_70%)]" />
-      <div className="pointer-events-none absolute left-1/4 -bottom-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(255,203,6,0.14)_0%,transparent_70%)]" />
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#06142e] via-[#081a3d] to-[#041126] border border-[#1e3a6a] text-white shadow-lg">
+      {/* Decorative ambient gradients */}
+      <div className="pointer-events-none absolute -top-24 -left-24 w-80 h-80 bg-blue-500/15 rounded-full blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 w-80 h-80 bg-cyan-500/15 rounded-full blur-3xl" />
 
-      <div className="relative z-10 flex flex-col gap-2.5">
-        {/* Top Row: Title + Compact KPI Pills + Soft Alert & 3-Light Indicator */}
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
-          {/* Left: SIT Title & Period */}
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#0086FF]/20 text-sky-200 border border-[#0086FF]/40">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FFCB06] opacity-80" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FFCB06]" />
-                </span>
+      <div className="relative p-4 sm:p-5">
+        {/* Top Header Row */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-3 border-b border-white/10">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/20 text-blue-200 border border-blue-400/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                 SIT Countdown Readiness
               </span>
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-100 bg-white/[0.08] border border-white/15 px-2.5 py-0.5 rounded-full">
-                <Calendar className="w-3.5 h-3.5 text-[#FFCB06] shrink-0" />
-                19 ต.ค. 69 ➔ <strong className="text-white">4 ม.ค. 70</strong> (รวม {timeline.totalDays} วัน)
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-300/90 bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20">
+                <Calendar className="w-3 h-3" />
+                19 ต.ค. 69 ➔ 4 ม.ค. 70 (รวม {timeline.totalDays} วัน)
               </span>
             </div>
-
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-1.5">
-                <Flag className="w-4 h-4 text-[#FFCB06] shrink-0" />
-                ระยะเวลาก่อนเข้าทดสอบระบบ SIT (วันที่ 4 มกราคม 2570)
-              </h2>
-              <span className="text-xs text-slate-300/90">
-                • เปรียบเทียบเวลาที่เดินไปกับอัตราการปิดปัญหา ({timeline.resolutionPct}%)
-              </span>
-            </div>
+            <h2 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+              <Flag className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>ระยะเวลาก่อนเข้าทดสอบระบบ SIT (วันที่ 4 มกราคม 2570)</span>
+            </h2>
+            <p className="text-xs text-blue-200/70 mt-0.5">
+              • เปรียบเทียบเวลาที่เดินไป ({timeline.timePct}%) กับอัตราความคืบหน้า Requirement เสร็จสมบูรณ์ ({timeline.completionPct}%)
+            </p>
           </div>
 
-          {/* Right: Crisp KPI Cards + Risk Alert Box */}
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-2 shrink-0">
-            {/* Elapsed Days Pill */}
-            <div className="bg-white/[0.07] border border-white/15 rounded-xl px-3 py-1.5 flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-400/35 flex items-center justify-center shrink-0">
-                <Clock className="w-3.5 h-3.5 text-sky-300" />
+          {/* Right Top KPI Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 shrink-0">
+            {/* Elapsed */}
+            <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0">
+                <Clock className="w-4 h-4 text-blue-300" />
               </div>
               <div>
-                <p className="text-[11px] font-medium text-slate-300 leading-tight">ผ่านมาแล้ว</p>
-                <p className="text-base sm:text-lg font-bold tabular-nums leading-tight text-white">
-                  {timeline.elapsedDays}{' '}
-                  <span className="text-xs font-medium text-sky-300">วัน ({timeline.timePct}%)</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Remaining Days Highlight Pill */}
-            <div
-              className={`${riskConfig.countdownBox} border rounded-xl px-3 py-1.5 flex items-center gap-2`}
-            >
-              <div className="w-7 h-7 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center shrink-0">
-                <Activity className={`w-3.5 h-3.5 ${riskConfig.iconTone}`} />
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-slate-200 leading-tight">เหลือก่อนเข้า SIT</p>
-                <p className={`text-lg sm:text-xl font-extrabold tabular-nums leading-tight ${riskConfig.countdownNum}`}>
-                  {timeline.remainingDays}{' '}
-                  <span className="text-xs font-semibold text-white/90">วัน</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Risk Status Alert + Traffic Light */}
-            <div
-              className={`col-span-2 sm:col-span-1 rounded-xl border px-3 py-1.5 flex items-center justify-between gap-2.5 ${riskConfig.pillClass}`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <RiskIcon className={`w-4 h-4 shrink-0 ${riskConfig.iconTone}`} />
-                <div className="min-w-0">
-                  <p className="text-xs font-bold leading-tight truncate">{riskConfig.label}</p>
-                  <p className="text-[11px] opacity-90 truncate">{riskConfig.subLabel}</p>
+                <div className="text-[10px] text-blue-200/70 leading-none">ผ่านมาแล้ว</div>
+                <div className="text-sm font-bold text-white mt-0.5">
+                  {timeline.elapsedDays} <span className="text-xs font-normal text-blue-200/70">วัน ({timeline.timePct}%)</span>
                 </div>
               </div>
+            </div>
 
-              {/* Clean Traffic Light */}
-              <div
-                className="flex items-center gap-1.5 bg-slate-950/75 border border-white/15 px-2 py-1 rounded-full shrink-0"
-                title="สถานะความเสี่ยง: เขียว (ปกติ) / เหลือง (เฝ้าระวัง) / แดง (เร่งด่วน)"
-              >
-                <span
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    timeline.overallRisk === 'green'
-                      ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
-                      : 'bg-emerald-950 opacity-50'
-                  }`}
-                />
-                <span
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    timeline.overallRisk === 'yellow'
-                      ? 'bg-amber-400 shadow-[0_0_8px_#fbbf24] animate-pulse'
-                      : 'bg-amber-950 opacity-50'
-                  }`}
-                />
-                <span
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    timeline.overallRisk === 'red'
-                      ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e] animate-pulse'
-                      : 'bg-rose-950 opacity-50'
-                  }`}
-                />
+            {/* Remaining */}
+            <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center shrink-0">
+                <Activity className="w-4 h-4 text-cyan-300" />
+              </div>
+              <div>
+                <div className="text-[10px] text-cyan-200/70 leading-none">เหลือก่อนเข้า SIT</div>
+                <div className="text-sm font-bold text-cyan-300 mt-0.5">
+                  {timeline.remainingDays} <span className="text-xs font-normal text-cyan-200/70">วัน</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Risk Assessment */}
+            <div className={`col-span-2 sm:col-span-1 rounded-xl px-3 py-2 border flex items-center gap-2.5 ${riskBadge.bgBadge} ${riskBadge.borderColor}`}>
+              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                <RiskIcon className={`w-4 h-4 ${riskBadge.textColor}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className={`text-[11px] font-bold truncate ${riskBadge.textColor}`}>
+                    {riskBadge.title}
+                  </span>
+                  {/* Visual LED status light */}
+                  <span className="flex items-center gap-0.5">
+                    <span className={`w-2 h-2 rounded-full ${timeline.overallRisk === 'green' ? riskBadge.ledActive : 'bg-white/10'}`} />
+                    <span className={`w-2 h-2 rounded-full ${timeline.overallRisk === 'yellow' ? riskBadge.ledActive : 'bg-white/10'}`} />
+                    <span className={`w-2 h-2 rounded-full ${timeline.overallRisk === 'red' ? riskBadge.ledActive : 'bg-white/10'}`} />
+                  </span>
+                </div>
+                <div className="text-[9.5px] text-white/60 truncate mt-0.5">
+                  {riskBadge.desc}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom Row: 3-Zone Progress Bar Infographic */}
-        <div className="bg-slate-950/55 border border-white/10 rounded-xl px-3 py-2">
-          {/* Risk Zone Guide Labels */}
-          <div className="flex items-center text-[10px] sm:text-[11px] font-medium mb-1.5 gap-1">
+        {/* 3-Zone Timeline Progress Bar */}
+        <div className="mt-3.5 pt-1">
+          {/* Zone header labels */}
+          <div className="flex justify-between items-center text-[10px] font-medium text-blue-200/70 mb-1.5 px-0.5">
+            <span className="flex items-center gap-1 text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              โซนเขียว: ปลอดภัย (วันที่ 1–42)
+            </span>
+            <span className="flex items-center gap-1 text-amber-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              โซนเหลือง: เร่งพัฒนา
+            </span>
+            <span className="flex items-center gap-1 text-rose-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+              โซนแดง: 15 วันท้าย
+            </span>
+          </div>
+
+          {/* Bar track with 3 zones */}
+          <div className="relative w-full h-7 rounded-xl bg-slate-900/80 border border-white/15 overflow-hidden p-0.5 flex">
+            {/* Zone 1: Green */}
             <div
               style={{ width: `${timeline.greenZonePct}%` }}
-              className="flex items-center gap-1 text-emerald-300 truncate"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-              <span className="truncate">โซนเขียว: ปลอดภัย (วันที่ 1–42)</span>
-            </div>
+              className="h-full bg-emerald-950/40 border-r border-emerald-500/20 relative"
+            />
+            {/* Zone 2: Yellow */}
             <div
               style={{ width: `${timeline.yellowZonePct}%` }}
-              className="flex items-center gap-1 text-amber-300 truncate"
-            >
-              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-              <span className="truncate">โซนเหลือง: เร่งปิด</span>
-            </div>
+              className="h-full bg-amber-950/40 border-r border-amber-500/20 relative"
+            />
+            {/* Zone 3: Red */}
             <div
               style={{ width: `${timeline.redZonePct}%` }}
-              className="flex items-center justify-end gap-1 text-rose-300 truncate"
+              className="h-full bg-rose-950/40 relative flex items-center justify-end pr-2 text-[10px] font-semibold text-rose-300/80"
             >
-              <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
-              <span className="truncate">โซนแดง: 15 วันท้าย</span>
-            </div>
-          </div>
-
-          {/* 3-Zone Track + Progress Fill */}
-          <div className="relative h-5 sm:h-5.5 rounded-full bg-slate-900 border border-white/15 overflow-hidden shadow-inner">
-            {/* Risk Zones Backdrop */}
-            <div className="absolute inset-0 flex">
-              <div
-                style={{ width: `${timeline.greenZonePct}%` }}
-                className="h-full bg-emerald-500/15 border-r border-white/15"
-              />
-              <div
-                style={{ width: `${timeline.yellowZonePct}%` }}
-                className="h-full bg-amber-500/20 border-r border-white/15"
-              />
-              <div
-                style={{ width: `${timeline.redZonePct}%` }}
-                className="h-full bg-rose-500/25"
-              />
+              <span className="truncate">เป้าหมาย SIT: 4 ม.ค. 70 (คงเหลือ {timeline.remainingDays} วัน)</span>
             </div>
 
-            {/* Elapsed Smooth Progress Fill + Subtle Shimmer */}
+            {/* Actual Elapsed Progress Fill */}
             <div
-              style={{ width: `${Math.max(4, timeline.timePct)}%` }}
-              className={`relative h-full rounded-full bg-gradient-to-r ${riskConfig.fillGradient} transition-all duration-700 overflow-hidden`}
+              style={{ width: `${Math.min(100, Math.max(2, timeline.timePct))}%` }}
+              className="absolute top-0.5 bottom-0.5 left-0.5 rounded-lg bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 shadow-md flex items-center justify-end pr-2 transition-all duration-500"
             >
-              <div className="sit-shimmer-sweep" />
-              <span
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white border-2 ${riskConfig.dotBorder} shadow-2xs`}
-              />
-            </div>
-
-            {/* Crisp Readable Labels inside Bar */}
-            <div className="absolute inset-0 flex items-center justify-between px-3 text-[11px] font-bold pointer-events-none">
-              <span className="text-slate-950 drop-shadow-[0_1px_1px_rgba(255,255,255,0.65)]">
+              <span className="text-[10px] font-bold text-slate-950 px-1.5 py-0.5 bg-white/90 rounded shadow-xs truncate">
                 Day {timeline.elapsedDays} / {timeline.totalDays} ({timeline.timePct}%)
               </span>
-              <span className="text-slate-200 drop-shadow">
-                เป้าหมาย SIT: 4 ม.ค. 70 (คงเหลือ {timeline.remainingDays} วัน)
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Metrics Bar */}
+        <div className="mt-3 pt-2.5 border-t border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Completion rate */}
+            <div className="flex items-center gap-1.5 text-blue-100 font-medium">
+              <span className="w-2 h-2 rounded-full bg-cyan-400" />
+              <span>ความคืบหน้า Requirement:</span>
+              <span className="font-bold text-white">
+                {timeline.doneReqs}/{timeline.totalReqs} เรื่อง ({timeline.completionPct}%)
               </span>
+            </div>
+
+            {/* High priority pending */}
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-200">
+              <Flame className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              <span>High Priority ค้าง:</span>
+              <span className="font-bold text-rose-300">{timeline.highPending} เรื่อง</span>
+            </div>
+
+            {/* Total pending */}
+            <div className="flex items-center gap-1.5 text-blue-200/80">
+              <CheckCircle2 className="w-3.5 h-3.5 text-blue-300" />
+              <span>คงค้างทั้งหมด:</span>
+              <span className="font-semibold text-white">{timeline.pendingReqs} เรื่อง</span>
             </div>
           </div>
 
-          {/* Compact Readiness Metrics Footer */}
-          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-                </span>
-                ความคืบหน้า Requirement:{' '}
-                <strong className="text-white">
-                  {timeline.closedIssues}/{timeline.totalIssues} เรื่อง ({timeline.resolutionPct}%)
-                </strong>
-              </span>
-              <span className="inline-flex items-center gap-1 text-rose-200 bg-rose-500/20 border border-rose-400/35 px-2 py-0.5 rounded-full font-semibold">
-                <Flame className="w-3 h-3 shrink-0 text-rose-300" />
-                High Priority ค้าง {timeline.highOpen} เรื่อง
-              </span>
-              <span className="inline-flex items-center gap-1 text-emerald-300 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                คงค้างทั้งหมด {timeline.openIssues} เรื่อง
-              </span>
-            </div>
-
-            <div className="flex items-center gap-3 text-[10px] text-slate-400">
-              <span className="inline-flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" /> เขียว &gt;35 วัน
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-amber-400" /> เหลือง 15–35 วัน
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-rose-400" /> แดง ≤15 วัน
-              </span>
-            </div>
+          {/* Color legend guide */}
+          <div className="flex items-center gap-3 text-[11px] text-blue-200/60">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              เขียว &gt;35 วัน
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              เหลือง 15–35 วัน
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-rose-400" />
+              แดง ≤15 วัน
+            </span>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

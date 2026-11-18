@@ -8,22 +8,18 @@ import {
   LayoutDashboard,
   FolderTree,
   FileSpreadsheet,
-  AlertTriangle,
-  Copy,
-  Check,
-  ExternalLink,
   Globe,
-  X,
+  ExternalLink,
   ListOrdered,
 } from 'lucide-react';
 import {
-  Issue,
-  IssueImage,
+  Requirement,
+  RequirementImage,
   PriorityType,
-  StatusType,
+  RequirementStatusType,
   TeamMember,
   SystemModule,
-  IssueFilter,
+  RequirementFilter,
   CORE_FUNCTIONS,
   CoreFunctionType,
   DEFAULT_CORE_FUNCTION,
@@ -31,7 +27,6 @@ import {
 } from '@/types';
 import dynamic from 'next/dynamic';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { collectSuggestedUpdaters } from '@/lib/timeline';
 import DashboardView from '@/components/DashboardView';
 import SitCountdownBanner from '@/components/SitCountdownBanner';
 
@@ -45,7 +40,7 @@ const TabLoadingFallback = ({ label }: { label: string }) => (
 );
 
 const IssueExplorerView = dynamic(() => import('@/components/IssueExplorerView'), {
-  loading: () => <TabLoadingFallback label="กำลังโหลดตารางแยกกลุ่ม..." />,
+  loading: () => <TabLoadingFallback label="กำลังโหลดตาราง Requirement..." />,
 });
 const PriorityListView = dynamic(() => import('@/components/PriorityListView'), {
   loading: () => <TabLoadingFallback label="กำลังโหลดรายการแยกตาม Priority..." />,
@@ -54,10 +49,10 @@ const IssueModal = dynamic(() => import('@/components/IssueModal'));
 const IssueDetailModal = dynamic(() => import('@/components/IssueDetailModal'));
 const DeleteGuardOverlay = dynamic(() => import('@/components/DeleteGuardOverlay'));
 
-const SNAPSHOT_CACHE_KEY = 'jiffy_requirement_snapshot_v3';
+const SNAPSHOT_CACHE_KEY = 'jiffy_requirement_snapshot_v4';
 
 interface CachedSnapshot {
-  issues: Issue[];
+  requirements: Requirement[];
   modules?: SystemModule[];
   teamMembers?: TeamMember[];
   savedAt: number;
@@ -69,7 +64,7 @@ function readSnapshotCache(): CachedSnapshot | null {
     const raw = localStorage.getItem(SNAPSHOT_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedSnapshot;
-    if (!Array.isArray(parsed?.issues) || parsed.issues.length === 0) return null;
+    if (!Array.isArray(parsed?.requirements) || parsed.requirements.length === 0) return null;
     return parsed;
   } catch {
     return null;
@@ -84,16 +79,35 @@ function writeSnapshotCache(snapshot: Omit<CachedSnapshot, 'savedAt'>) {
       JSON.stringify({ ...snapshot, savedAt: Date.now() })
     );
   } catch {
-    // Ignore storage quota errors
+    // Ignore storage quota
   }
 }
 
-async function loadFallbackIssues(): Promise<Issue[]> {
-  const { default: raw } = await import('@/data/initialIssues.json');
-  return (raw as Issue[]).map((item) => ({
-    ...item,
-    core_function: (item.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType,
-  }));
+async function loadFallbackRequirements(): Promise<Requirement[]> {
+  try {
+    const { default: raw } = await import('@/data/initialRequirements.json');
+    return (raw as any[]).map((r) => ({
+      ...r,
+      req_id: r.req_id || r.log_id || 'JFY-REQ-01',
+      title: r.title || r.details || '',
+      core_function: (r.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType,
+      requested_by: r.requested_by || r.raise_by || 'Nat',
+      request_date: r.request_date || r.raise_date || new Date().toISOString(),
+      dev_assigned: r.dev_assigned || r.closed_by || null,
+      target_version: r.target_version || r.closed_version || null,
+      remark: r.remark || r.resolution || null,
+      images: r.images || [],
+      // compatibility
+      log_id: r.req_id || r.log_id || 'JFY-REQ-01',
+      raise_by: r.requested_by || r.raise_by || 'Nat',
+      raise_date: r.request_date || r.raise_date || new Date().toISOString(),
+      resolution: r.remark || r.resolution || '',
+      closed_by: r.dev_assigned || r.closed_by || null,
+      closed_version: r.target_version || r.closed_version || null,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 const DEFAULT_MODULES: SystemModule[] = CORE_FUNCTIONS.flatMap((core, coreIdx) =>
@@ -105,97 +119,46 @@ const DEFAULT_MODULES: SystemModule[] = CORE_FUNCTIONS.flatMap((core, coreIdx) =
 );
 
 const DEFAULT_TEAM: TeamMember[] = [
-  { id: 5, name: 'Aoy', role: 'Project Lead' },
-  { id: 3, name: 'Kampon', role: 'QA / Lead' },
-  { id: 4, name: 'Kraijate', role: 'QA / Tester' },
-  { id: 2, name: 'Tukta', role: 'QA / Tester' },
-  { id: 1, name: 'Nat', role: 'QA / Tester' },
+  { id: 1, name: 'Aoy', role: 'Project Lead' },
+  { id: 2, name: 'Kampon', role: 'Dev / Lead' },
+  { id: 3, name: 'Kraijate', role: 'QA / Tester' },
+  { id: 4, name: 'Tukta', role: 'Dev / Member' },
+  { id: 5, name: 'Nat', role: 'Dev / Member' },
 ];
-
-const LOCAL_CORE_OVERRIDES_KEY = 'jiffy_issue_core_overrides_v1';
-const SUPABASE_SQL_EDITOR_URL = 'https://supabase.com/dashboard/project/cnzthrnkyumhgsomszwu/sql/new';
-
-const MIGRATION_SQL_SNIPPET = `ALTER TABLE public.issues ADD COLUMN IF NOT EXISTS core_function VARCHAR(100) NOT NULL DEFAULT 'VTec Cloud HQ';
-CREATE INDEX IF NOT EXISTS idx_issues_core_function ON public.issues(core_function);
-ALTER TABLE public.modules ADD COLUMN IF NOT EXISTS core_function VARCHAR(100) NOT NULL DEFAULT 'VTec Cloud HQ';
-ALTER TABLE public.modules DROP CONSTRAINT IF EXISTS modules_name_key;
-ALTER TABLE public.modules ADD CONSTRAINT modules_core_function_name_key UNIQUE (core_function, name);`;
-
-function isMissingCoreColumnError(err: unknown): boolean {
-  if (!err || typeof err !== 'object') return false;
-  const e = err as { code?: string; message?: string; details?: string };
-  const msg = `${e.message || ''} ${e.details || ''}`.toLowerCase();
-  return e.code === 'PGRST204' || e.code === '42703' || msg.includes('core_function');
-}
-
-function readLocalCoreOverrides(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = localStorage.getItem(LOCAL_CORE_OVERRIDES_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeLocalCoreOverride(logId: string, coreFunction: string) {
-  if (typeof window === 'undefined' || !logId) return;
-  try {
-    const current = readLocalCoreOverrides();
-    current[logId] = coreFunction;
-    localStorage.setItem(LOCAL_CORE_OVERRIDES_KEY, JSON.stringify(current));
-  } catch {
-    // Ignore storage quota errors
-  }
-}
 
 type ActiveTab = 'dashboard' | 'explorer' | 'priority';
 
 export default function HomePage() {
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [modules, setModules] = useState<SystemModule[]>(DEFAULT_MODULES);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(DEFAULT_TEAM);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
-  // Schema migration banner status (if Supabase issues table doesn't have core_function column yet)
-  const [needsSchemaMigration, setNeedsSchemaMigration] = useState(false);
-  const [dismissedMigrationBanner, setDismissedMigrationBanner] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
-
-  // Explorer drill-down state
+  // Explorer drill-down
   const [explorerCore, setExplorerCore] = useState<CoreFunctionType | null>(null);
   const [explorerModule, setExplorerModule] = useState<string | null>(null);
 
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
+  const [editingRequirement, setEditingRequirement] = useState<Requirement | null>(null);
   const [modalPresetCore, setModalPresetCore] = useState<CoreFunctionType | undefined>(undefined);
   const [modalPresetModule, setModalPresetModule] = useState<string | undefined>(undefined);
   const [modalPresetPriority, setModalPresetPriority] = useState<PriorityType | undefined>(undefined);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+  const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null);
 
-  // Protected 5-click Admin delete guard state
+  // Protected 5-click delete guard
   const [deleteWarningVisible, setDeleteWarningVisible] = useState(false);
-  const [pendingDeleteIssue, setPendingDeleteIssue] = useState<Issue | null>(null);
-  const [isDeletingIssue, setIsDeletingIssue] = useState(false);
-  const deleteClickTrackerRef = useRef<{ issueId: string; count: number; lastClickAt: number }>({
-    issueId: '',
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteClickTrackerRef = useRef<{ id: string; count: number; lastClickAt: number }>({
+    id: '',
     count: 0,
     lastClickAt: 0,
   });
-  const deleteWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (deleteWarningTimerRef.current) {
-        clearTimeout(deleteWarningTimerRef.current);
-      }
-    };
-  }, []);
-
-  // Excel export progress state
+  // Excel export progress
   const [exportProgress, setExportProgress] = useState<{
     active: boolean;
     current: number;
@@ -204,80 +167,69 @@ export default function HomePage() {
   } | null>(null);
 
   // Filters state
-  const [filter, setFilter] = useState<IssueFilter>({
+  const [filter, setFilter] = useState<RequirementFilter>({
     search: '',
     core_function: '',
     status: '',
     priority: '',
     module: '',
-    raise_by: '',
+    requested_by: '',
+    dev_assigned: '',
   });
-
-  // Normalize DB modules (fallback to DEFAULT_MODULES only when DB table is empty)
-  const mergeModulesWithDefaults = useCallback((dbModules: SystemModule[]): SystemModule[] => {
-    if (!dbModules || dbModules.length === 0) {
-      return DEFAULT_MODULES;
-    }
-    return dbModules.map((m) => ({
-      ...m,
-      core_function: (m.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType,
-    }));
-  }, []);
 
   const metadataLoadedRef = useRef(false);
 
-  const normalizeIssueRows = useCallback(
-    (rows: Issue[], dbHasCoreCol: boolean): Issue[] => {
-      const localOverrides = dbHasCoreCol ? {} : readLocalCoreOverrides();
-      return rows.map((row) => ({
-        ...row,
-        core_function: (row.core_function ||
-          localOverrides[row.log_id] ||
-          DEFAULT_CORE_FUNCTION) as CoreFunctionType,
-      }));
-    },
-    []
-  );
+  // Map DB row from 'requirements' table directly to Requirement interface
+  const mapRequirementRow = useCallback((r: any): Requirement => {
+    const rawReqId = r.req_id || r.log_id || 'JFY-REQ-01';
+    const rawTitle = r.title || r.details || '';
+    const rawCore = (r.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType;
+    const rawModule = r.module || 'General';
+    const rawReqBy = r.requested_by || r.raise_by || 'Nat';
+    const rawReqDate = r.request_date || r.raise_date || r.created_at || new Date().toISOString();
+    const rawStatus = (r.status || 'Draft') as RequirementStatusType;
+    const rawDev = r.dev_assigned || r.closed_by || null;
+    const rawVer = r.target_version || r.closed_version || null;
+    const rawRemark = r.remark || r.resolution || null;
 
-  const mapRequirementRow = useCallback((r: any): Issue => ({
-    id: r.id,
-    log_id: r.req_id || r.log_id || 'JFY-REQ-01',
-    priority: r.priority || '2.Medium',
-    type: r.type || 'New Feature',
-    core_function: (r.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType,
-    module: r.module || 'General',
-    details: r.details || r.title || '',
-    raise_by: r.requested_by || r.raise_by || 'Team',
-    raise_date: r.request_date || r.raise_date || r.created_at || new Date().toISOString(),
-    status:
-      r.status === 'Draft'
-        ? 'Open'
-        : r.status === 'In Review'
-        ? 'Need Info'
-        : r.status === 'In Development'
-        ? 'In Progress'
-        : r.status === 'Testing'
-        ? 'Test'
-        : r.status === 'Done'
-        ? 'Closed'
-        : r.status || 'Open',
-    resolution: r.remark || r.resolution || '',
-    closed_by: r.dev_assigned || r.closed_by || null,
-    closed_version: r.target_version || r.closed_version || null,
-    remark: r.remark || null,
-    created_at: r.created_at,
-    updated_at: r.updated_at,
-    images: (r.images || r.requirement_images || r.issue_images || []).map((img: any) => ({
+    const rawImages = (r.images || r.requirement_images || []).map((img: any) => ({
       id: img.id,
-      issue_id: img.requirement_id || img.issue_id,
+      requirement_id: img.requirement_id || img.issue_id,
       file_url: img.file_url,
       file_name: img.file_name,
       file_size: img.file_size,
-    })),
-  }), []);
+    }));
 
-  // Fast requirement-only refresh (used after mutations or fallback resync)
-  const fetchIssuesOnly = useCallback(async () => {
+    return {
+      id: r.id,
+      req_id: rawReqId,
+      title: rawTitle,
+      priority: r.priority || '2.Medium',
+      type: r.type || 'New Feature',
+      core_function: rawCore,
+      module: rawModule,
+      details: r.details || rawTitle,
+      requested_by: rawReqBy,
+      request_date: rawReqDate,
+      status: rawStatus,
+      dev_assigned: rawDev,
+      target_version: rawVer,
+      remark: rawRemark,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      images: rawImages,
+      // Backward-compat helpers
+      log_id: rawReqId,
+      raise_by: rawReqBy,
+      raise_date: rawReqDate,
+      resolution: rawRemark || '',
+      closed_by: rawDev,
+      closed_version: rawVer,
+    };
+  }, []);
+
+  // Quick refresh requirements only
+  const fetchRequirementsOnly = useCallback(async () => {
     if (!isSupabaseConfigured) return;
     const { data, error } = await supabase
       .from('requirements')
@@ -285,23 +237,23 @@ export default function HomePage() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.warn('Requirements table error:', error);
+      console.warn('Requirements fetch error:', error);
       return;
     }
     if (data) {
       const mapped = data.map(mapRequirementRow);
-      setIssues(mapped);
-      writeSnapshotCache({ issues: mapped });
+      setRequirements(mapped);
+      writeSnapshotCache({ requirements: mapped });
     }
   }, [mapRequirementRow]);
 
-  // Load data (initial load or manual refresh)
+  // Full data fetch
   const fetchData = useCallback(async () => {
     setLoading(true);
 
     if (!isSupabaseConfigured) {
-      const fallback = await loadFallbackIssues();
-      setIssues(fallback);
+      const fallback = await loadFallbackRequirements();
+      setRequirements(fallback);
       setLoading(false);
       return;
     }
@@ -323,31 +275,18 @@ export default function HomePage() {
         reqPromise,
       ]);
 
-      let nextModules: SystemModule[] | undefined;
-      if (includeMetadata) {
-        if (modulesRes.data && modulesRes.data.length > 0) {
-          nextModules = mergeModulesWithDefaults(modulesRes.data as SystemModule[]);
-          setModules(nextModules);
-        } else {
-          nextModules = DEFAULT_MODULES;
-          setModules(DEFAULT_MODULES);
-        }
+      let nextModules: SystemModule[] = DEFAULT_MODULES;
+      if (includeMetadata && modulesRes.data && modulesRes.data.length > 0) {
+        nextModules = modulesRes.data.map((m: any) => ({
+          ...m,
+          core_function: (m.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType,
+        }));
+        setModules(nextModules);
       }
 
-      let nextTeam: TeamMember[] | undefined;
+      let nextTeam: TeamMember[] = DEFAULT_TEAM;
       if (includeMetadata && teamRes.data && teamRes.data.length > 0) {
-        const priorityOrder: Record<string, number> = {
-          'Aoy': 1,
-          'Kampon': 2,
-          'Kraijate': 3,
-          'Tukta': 4,
-          'Nat': 5,
-        };
-        nextTeam = [...teamRes.data].sort((a, b) => {
-          const ordA = priorityOrder[a.name] || 99;
-          const ordB = priorityOrder[b.name] || 99;
-          return ordA - ordB;
-        });
+        nextTeam = teamRes.data;
         setTeamMembers(nextTeam);
       }
 
@@ -356,103 +295,87 @@ export default function HomePage() {
       }
 
       if (reqRes.data && reqRes.data.length > 0) {
-        const normalized = reqRes.data.map(mapRequirementRow);
-        setIssues(normalized);
+        const mapped = reqRes.data.map(mapRequirementRow);
+        setRequirements(mapped);
         writeSnapshotCache({
-          issues: normalized,
+          requirements: mapped,
           modules: nextModules,
           teamMembers: nextTeam,
         });
       } else {
-        setIssues(await loadFallbackIssues());
+        const fallback = await loadFallbackRequirements();
+        setRequirements(fallback);
       }
     } catch (err) {
-      console.error('Error fetching Supabase data:', err);
-      setIssues(await loadFallbackIssues());
+      console.error('Fetch error:', err);
+      const fallback = await loadFallbackRequirements();
+      setRequirements(fallback);
     } finally {
       setLoading(false);
     }
-  }, [mapRequirementRow, mergeModulesWithDefaults]);
+  }, [mapRequirementRow]);
 
   useEffect(() => {
-    // Hydrate cached snapshot immediately for instant repeat-visit paint while Supabase revalidates
     const cached = readSnapshotCache();
     if (cached) {
-      setIssues(cached.issues);
+      setRequirements(cached.requirements);
       if (cached.modules?.length) setModules(cached.modules);
       if (cached.teamMembers?.length) setTeamMembers(cached.teamMembers);
     }
     fetchData();
   }, [fetchData]);
 
-  // Quietly warm lazy-loaded tabs/modals during browser idle time after initial dashboard renders
-  useEffect(() => {
-    if (loading) return;
-    const warmChunks = () => {
-      void import('@/components/IssueDetailModal');
-      void import('@/components/PriorityListView');
-      void import('@/components/IssueExplorerView');
-      void import('@/components/IssueModal');
-    };
-    const w = window as Window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-      cancelIdleCallback?: (id: number) => void;
-    };
-    if (typeof w.requestIdleCallback === 'function') {
-      const id = w.requestIdleCallback(warmChunks, { timeout: 2000 });
-      return () => w.cancelIdleCallback?.(id);
-    }
-    const timer = setTimeout(warmChunks, 1200);
-    return () => clearTimeout(timer);
-  }, [loading]);
-
-  // Calculate Next Log ID
-  const nextLogId = useMemo(() => {
+  // Next running Req ID
+  const nextReqId = useMemo(() => {
     let maxNum = 0;
-    issues.forEach((item) => {
-      const match = item.log_id.match(/\d+/);
+    requirements.forEach((item) => {
+      const match = (item.req_id || (item as any).log_id || '').match(/\d+/);
       if (match) {
         const num = parseInt(match[0], 10);
         if (num > maxNum) maxNum = num;
       }
     });
     return `JFY-REQ-${String(maxNum + 1).padStart(2, '0')}`;
-  }, [issues]);
+  }, [requirements]);
 
-  // Handle Save
-  const handleSaveIssue = async (issueData: Partial<Issue>, newImages: IssueImage[]) => {
-    const chosenCore = (issueData.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType;
+  // Save (Create or Update)
+  const handleSaveRequirement = async (
+    reqData: Partial<Requirement>,
+    newImages: RequirementImage[]
+  ) => {
+    const chosenCore = (reqData.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType;
+
+    const basePayload = {
+      req_id: reqData.req_id || nextReqId,
+      title: reqData.title || reqData.details?.slice(0, 80) || 'Requirement',
+      priority: reqData.priority || '2.Medium',
+      type: reqData.type || 'New Feature',
+      module: reqData.module || 'General',
+      details: reqData.details || '',
+      requested_by: reqData.requested_by || 'Nat',
+      request_date: reqData.request_date || new Date().toISOString(),
+      status: reqData.status || 'Draft',
+      dev_assigned: reqData.dev_assigned || null,
+      target_version: reqData.target_version || null,
+      remark: reqData.remark || null,
+      core_function: chosenCore,
+    };
 
     if (isSupabaseConfigured) {
-      const basePayload = {
-        req_id: issueData.log_id,
-        title: (issueData.details || '').slice(0, 100),
-        priority: issueData.priority || '2.Medium',
-        type: issueData.type || 'New Feature',
-        module: issueData.module || 'General',
-        details: issueData.details || '',
-        requested_by: issueData.raise_by || 'Team',
-        status: issueData.status || 'Open',
-        dev_assigned: issueData.closed_by || null,
-        target_version: issueData.closed_version || null,
-        remark: issueData.remark || issueData.resolution || null,
-        core_function: chosenCore,
-      };
+      let savedId = reqData.id;
 
-      let savedIssueId = issueData.id;
-
-      if (issueData.id && !issueData.id.startsWith('legacy-') && !issueData.id.startsWith('local-')) {
-        let { error: updateErr } = await supabase
+      if (reqData.id && !reqData.id.startsWith('legacy-') && !reqData.id.startsWith('local-')) {
+        const { error: updateErr } = await supabase
           .from('requirements')
           .update({ ...basePayload, updated_at: new Date().toISOString() })
-          .eq('id', issueData.id);
+          .eq('id', reqData.id);
 
         if (updateErr) throw updateErr;
 
-        await supabase.from('requirement_images').delete().eq('requirement_id', issueData.id);
+        await supabase.from('requirement_images').delete().eq('requirement_id', reqData.id);
         if (newImages.length > 0) {
           const imagesToInsert = newImages.map((img) => ({
-            requirement_id: issueData.id,
+            requirement_id: reqData.id,
             file_url: img.file_url,
             file_name: img.file_name,
             file_size: img.file_size || 0,
@@ -461,18 +384,18 @@ export default function HomePage() {
         }
       } else {
         const newUuid = crypto.randomUUID();
-        let { data: newRow, error: insertErr } = await supabase
+        const { data: newRow, error: insertErr } = await supabase
           .from('requirements')
           .insert({ id: newUuid, ...basePayload })
           .select('id')
           .single();
 
         if (insertErr) throw insertErr;
-        savedIssueId = newRow?.id || newUuid;
+        savedId = newRow?.id || newUuid;
 
-        if (newImages.length > 0 && savedIssueId) {
+        if (newImages.length > 0 && savedId) {
           const imagesToInsert = newImages.map((img) => ({
-            requirement_id: savedIssueId,
+            requirement_id: savedId,
             file_url: img.file_url,
             file_name: img.file_name,
             file_size: img.file_size || 0,
@@ -481,384 +404,230 @@ export default function HomePage() {
         }
       }
 
-      await fetchIssuesOnly();
+      await fetchRequirementsOnly();
     } else {
-      if (issueData.id) {
-        setIssues((prev) =>
-          prev.map((item) =>
-            item.id === issueData.id
-              ? ({ ...item, ...issueData, core_function: chosenCore, images: newImages } as Issue)
-              : item
+      // Local fallback
+      if (reqData.id) {
+        setRequirements((prev) =>
+          prev.map((r) =>
+            r.id === reqData.id
+              ? ({ ...r, ...basePayload, images: newImages, updated_at: new Date().toISOString() } as Requirement)
+              : r
           )
         );
       } else {
-        const newRecord: Issue = {
+        const localNew: Requirement = {
           id: `local-${Date.now()}`,
-          log_id: issueData.log_id || nextLogId,
-          core_function: chosenCore,
-          priority: issueData.priority || '2.Medium',
-          type: issueData.type || 'New Feature',
-          module: issueData.module || 'General',
-          details: issueData.details || '',
-          raise_by: issueData.raise_by || 'Kraijate',
-          raise_date: new Date().toISOString(),
-          status: issueData.status || 'Open',
-          resolution: issueData.resolution,
-          closed_by: issueData.closed_by,
-          closed_version: issueData.closed_version,
-          remark: issueData.remark,
-          created_at: new Date().toISOString(),
+          ...basePayload,
           images: newImages,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         };
-        setIssues((prev) => [newRecord, ...prev]);
+        setRequirements((prev) => [localNew, ...prev]);
       }
     }
   };
 
-  // Quick Status Change (optimistic update for instant UI feedback)
-  const handleStatusChange = async (issueId: string, newStatus: StatusType) => {
-    const closedDate = newStatus === 'Closed' ? new Date().toISOString() : undefined;
-
-    setIssues((prev) => {
-      const next = prev.map((i) =>
-        i.id === issueId
-          ? {
-              ...i,
-              status: newStatus,
-              closed_date: closedDate ?? i.closed_date,
-            }
-          : i
+  // Status Change
+  const handleStatusChange = async (reqId: string, newStatus: RequirementStatusType) => {
+    setRequirements((prev) => {
+      const next = prev.map((r) =>
+        r.id === reqId ? { ...r, status: newStatus, updated_at: new Date().toISOString() } : r
       );
-      writeSnapshotCache({ issues: next });
+      writeSnapshotCache({ requirements: next });
       return next;
     });
 
-    if (selectedIssue && selectedIssue.id === issueId) {
-      setSelectedIssue((prev) =>
-        prev ? { ...prev, status: newStatus, closed_date: closedDate ?? prev.closed_date } : null
-      );
+    if (selectedRequirement && selectedRequirement.id === reqId) {
+      setSelectedRequirement((prev) => (prev ? { ...prev, status: newStatus } : null));
     }
 
-    if (isSupabaseConfigured && !issueId.startsWith('legacy-') && !issueId.startsWith('local-')) {
-      const updates: Record<string, unknown> = {
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      };
-      const { error } = await supabase.from('requirements').update(updates).eq('id', issueId);
+    if (isSupabaseConfigured && !reqId.startsWith('legacy-') && !reqId.startsWith('local-')) {
+      const { error } = await supabase
+        .from('requirements')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', reqId);
       if (error) {
-        await fetchIssuesOnly();
+        await fetchRequirementsOnly();
       }
     }
   };
 
-  // Collect unique updater names from existing timelines & team members
-  const knownUpdaters = useMemo(
-    () => collectSuggestedUpdaters(issues, teamMembers),
-    [issues, teamMembers]
-  );
-
-  // Inline Update from Detail Modal (syncs single requirement without full reload)
-  const handleInlineUpdateIssue = async (
-    issueId: string,
-    updates: Partial<Issue>,
-    newImages: IssueImage[]
+  // Inline Update from Detail Modal
+  const handleInlineUpdateRequirement = async (
+    reqId: string,
+    updates: Partial<Requirement>,
+    newImages: RequirementImage[]
   ) => {
-    const nowIso = new Date().toISOString();
-    const safeUpdates: Record<string, unknown> = {};
-    if (updates.resolution !== undefined) safeUpdates.remark = updates.resolution;
-    if (updates.closed_by !== undefined) safeUpdates.dev_assigned = updates.closed_by;
-    if (updates.closed_version !== undefined) safeUpdates.target_version = updates.closed_version;
-    if (updates.remark !== undefined) safeUpdates.remark = updates.remark;
-    if (updates.status !== undefined) safeUpdates.status = updates.status;
-    safeUpdates.updated_at = nowIso;
+    const payload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (updates.dev_assigned !== undefined) payload.dev_assigned = updates.dev_assigned;
+    if (updates.target_version !== undefined) payload.target_version = updates.target_version;
+    if (updates.remark !== undefined) payload.remark = updates.remark;
+    if (updates.status !== undefined) payload.status = updates.status;
 
-    let syncedImages = newImages;
-
-    if (isSupabaseConfigured && !issueId.startsWith('legacy-') && !issueId.startsWith('local-')) {
+    if (isSupabaseConfigured && !reqId.startsWith('legacy-') && !reqId.startsWith('local-')) {
       const { error: updateErr } = await supabase
         .from('requirements')
-        .update(safeUpdates)
-        .eq('id', issueId);
-
+        .update(payload)
+        .eq('id', reqId);
       if (updateErr) throw updateErr;
 
-      await supabase.from('requirement_images').delete().eq('requirement_id', issueId);
+      await supabase.from('requirement_images').delete().eq('requirement_id', reqId);
       if (newImages.length > 0) {
         const imagesToInsert = newImages.map((img) => ({
-          requirement_id: issueId,
+          requirement_id: reqId,
           file_url: img.file_url,
           file_name: img.file_name,
           file_size: img.file_size || 0,
         }));
-        const { data: insertedImages } = await supabase
-          .from('requirement_images')
-          .insert(imagesToInsert)
-          .select('id, requirement_id, file_url, file_name, file_size');
-        if (insertedImages) {
-          syncedImages = insertedImages.map((img: any) => ({
-            id: img.id,
-            issue_id: img.requirement_id,
-            file_url: img.file_url,
-            file_name: img.file_name,
-            file_size: img.file_size,
-          }));
-        }
+        await supabase.from('requirement_images').insert(imagesToInsert);
       }
-    }
 
-    setIssues((prev) => {
-      const next = prev.map((item) =>
-        item.id === issueId
-          ? ({ ...item, ...safeUpdates, updated_at: nowIso, images: syncedImages } as Issue)
-          : item
-      );
-      writeSnapshotCache({ issues: next });
-      return next;
-    });
-
-    if (selectedIssue && selectedIssue.id === issueId) {
-      setSelectedIssue((prev) =>
-        prev ? ({ ...prev, ...safeUpdates, updated_at: nowIso, images: syncedImages } as Issue) : null
-      );
-    }
-  };
-
-  // Execute actual DB deletion (only after 5-click Admin Confirm)
-  const executeDeleteIssue = async (issueId: string) => {
-    setIssues((prev) => {
-      const next = prev.filter((i) => i.id !== issueId);
-      writeSnapshotCache({ issues: next });
-      return next;
-    });
-
-    if (isSupabaseConfigured && !issueId.startsWith('legacy-') && !issueId.startsWith('local-')) {
-      const { error } = await supabase.from('requirements').delete().eq('id', issueId);
-      if (error) {
-        await fetchIssuesOnly();
-      }
-    }
-  };
-
-  // Protected delete click handler: warns regular users (clicks 1–4), opens Admin Confirm modal on 5th click
-  const handleProtectedDeleteRequest = async (issueId: string) => {
-    const target = issues.find((i) => i.id === issueId);
-    if (!target) return;
-
-    const now = Date.now();
-    const prev = deleteClickTrackerRef.current;
-    const withinWindow = prev.issueId === issueId && now - prev.lastClickAt <= 5000;
-    const nextCount = withinWindow ? prev.count + 1 : 1;
-
-    deleteClickTrackerRef.current = {
-      issueId,
-      count: nextCount,
-      lastClickAt: now,
-    };
-
-    if (deleteWarningTimerRef.current) {
-      clearTimeout(deleteWarningTimerRef.current);
-      deleteWarningTimerRef.current = null;
-    }
-
-    if (nextCount >= 5) {
-      deleteClickTrackerRef.current = { issueId: '', count: 0, lastClickAt: 0 };
-      setDeleteWarningVisible(false);
-      setPendingDeleteIssue(target);
-      return;
-    }
-
-    setDeleteWarningVisible(true);
-    deleteWarningTimerRef.current = setTimeout(() => {
-      setDeleteWarningVisible(false);
-      deleteWarningTimerRef.current = null;
-    }, 4500);
-  };
-
-  const handleConfirmDeleteIssue = async () => {
-    if (!pendingDeleteIssue || isDeletingIssue) return;
-    setIsDeletingIssue(true);
-    try {
-      const targetId = pendingDeleteIssue.id;
-      await executeDeleteIssue(targetId);
-      if (selectedIssue?.id === targetId) {
-        setDetailModalOpen(false);
-        setSelectedIssue(null);
-      }
-      setPendingDeleteIssue(null);
-    } finally {
-      setIsDeletingIssue(false);
-    }
-  };
-
-  // Add Module
-  const handleAddModule = async (name: string, coreFunction: CoreFunctionType | string = DEFAULT_CORE_FUNCTION) => {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from('modules').insert({ name, core_function: coreFunction });
-      if (error && isMissingCoreColumnError(error)) {
-        await supabase.from('modules').insert({ name });
-      }
-      const { data } = await supabase.from('modules').select('*').order('name');
-      if (data) {
-        setModules((prev) => {
-          const merged = mergeModulesWithDefaults(data as SystemModule[]);
-          const hasEntry = merged.some(
-            (m) =>
-              (m.core_function || DEFAULT_CORE_FUNCTION) === coreFunction &&
-              m.name.toLowerCase() === name.toLowerCase()
-          );
-          return hasEntry
-            ? merged
-            : [...merged, { id: Date.now(), core_function: coreFunction, name }];
-        });
-      }
+      await fetchRequirementsOnly();
     } else {
-      setModules((prev) => [...prev, { id: Date.now(), core_function: coreFunction, name }]);
+      setRequirements((prev) =>
+        prev.map((r) => (r.id === reqId ? ({ ...r, ...payload, images: newImages } as Requirement) : r))
+      );
+    }
+
+    if (selectedRequirement && selectedRequirement.id === reqId) {
+      setSelectedRequirement((prev) =>
+        prev ? ({ ...prev, ...payload, images: newImages } as Requirement) : null
+      );
     }
   };
 
-  // Update Sub-module (Rename)
-  const handleUpdateModule = async (
-    oldName: string,
-    newName: string,
-    coreFunction: CoreFunctionType | string = DEFAULT_CORE_FUNCTION
-  ) => {
-    const trimmedNew = newName.trim();
-    if (!trimmedNew || trimmedNew === oldName) return;
+  // Protected Delete
+  const handleProtectedDeleteRequest = async (reqId: string) => {
+    const now = Date.now();
+    const tracker = deleteClickTrackerRef.current;
 
-    // Check duplicate in the same core
-    const duplicate = modules.some(
-      (m) =>
-        (m.core_function || DEFAULT_CORE_FUNCTION) === coreFunction &&
-        m.name.toLowerCase() === trimmedNew.toLowerCase()
-    );
-    if (duplicate) {
-      alert(`มีกลุ่มย่อยชื่อ "${trimmedNew}" ในกลุ่ม ${coreFunction} อยู่แล้ว`);
+    if (tracker.id !== reqId || now - tracker.lastClickAt > 3500) {
+      deleteClickTrackerRef.current = { id: reqId, count: 1, lastClickAt: now };
+    } else {
+      tracker.count++;
+      tracker.lastClickAt = now;
+    }
+
+    if (deleteClickTrackerRef.current.count >= 5) {
+      deleteClickTrackerRef.current = { id: '', count: 0, lastClickAt: 0 };
+      setPendingDeleteId(reqId);
+      setDeleteWarningVisible(true);
       return;
     }
 
+    const target = requirements.find((r) => r.id === reqId);
+    const confirmed = window.confirm(
+      `ยืนยันการลบ Requirement "${target?.req_id || reqId}: ${target?.title || ''}" หรือไม่?`
+    );
+    if (!confirmed) return;
+
+    await executeDelete(reqId);
+  };
+
+  const executeDelete = async (reqId: string) => {
+    setIsDeleting(true);
+    try {
+      if (isSupabaseConfigured && !reqId.startsWith('legacy-') && !reqId.startsWith('local-')) {
+        await supabase.from('requirement_images').delete().eq('requirement_id', reqId);
+        await supabase.from('requirements').delete().eq('id', reqId);
+      }
+      setRequirements((prev) => {
+        const next = prev.filter((r) => r.id !== reqId);
+        writeSnapshotCache({ requirements: next });
+        return next;
+      });
+      if (selectedRequirement?.id === reqId) {
+        setDetailModalOpen(false);
+        setSelectedRequirement(null);
+      }
+    } catch (err: any) {
+      alert('เกิดข้อผิดพลาดในการลบ: ' + (err?.message || err));
+    } finally {
+      setIsDeleting(false);
+      setDeleteWarningVisible(false);
+      setPendingDeleteId(null);
+    }
+  };
+
+  // Module management
+  const handleAddModule = async (name: string, coreFunction: CoreFunctionType | string) => {
     if (isSupabaseConfigured) {
-      // 1. Update in modules table
-      const { error: modErr } = await supabase
+      await supabase.from('modules').insert({ name, core_function: coreFunction });
+      const { data } = await supabase.from('modules').select('*').order('name');
+      if (data) setModules(data);
+    } else {
+      setModules((prev) => [...prev, { id: Date.now(), name, core_function: coreFunction as string }]);
+    }
+  };
+
+  const handleUpdateModule = async (oldName: string, newName: string, coreFunction: CoreFunctionType | string) => {
+    if (isSupabaseConfigured) {
+      await supabase
         .from('modules')
-        .update({ name: trimmedNew })
+        .update({ name: newName })
         .eq('core_function', coreFunction)
         .eq('name', oldName);
 
-      if (modErr) {
-        console.error('Update module error:', modErr);
-        alert('เกิดข้อผิดพลาดในการแก้ไขชื่อกลุ่มย่อย: ' + modErr.message);
-        return;
-      }
-
-      // 2. Cascade update in issues table for all issues referencing this module in this core
-      const { error: issueErr } = await supabase
-        .from('issues')
-        .update({ module: trimmedNew })
+      await supabase
+        .from('requirements')
+        .update({ module: newName })
         .eq('core_function', coreFunction)
         .eq('module', oldName);
-
-      if (issueErr) {
-        console.error('Cascade update issues module error:', issueErr);
-      }
     }
 
-    // Optimistic state updates
     setModules((prev) =>
       prev.map((m) =>
-        (m.core_function || DEFAULT_CORE_FUNCTION) === coreFunction && m.name === oldName
-          ? { ...m, name: trimmedNew }
-          : m
+        m.core_function === coreFunction && m.name === oldName ? { ...m, name: newName } : m
       )
     );
-
-    setIssues((prev) =>
-      prev.map((i) =>
-        (i.core_function || DEFAULT_CORE_FUNCTION) === coreFunction && i.module === oldName
-          ? { ...i, module: trimmedNew }
-          : i
+    setRequirements((prev) =>
+      prev.map((r) =>
+        r.core_function === coreFunction && r.module === oldName ? { ...r, module: newName } : r
       )
     );
-
-    if (explorerModule === oldName) {
-      setExplorerModule(trimmedNew);
-    }
   };
 
-  // Delete Sub-module (with strict check: cannot delete if issues exist)
-  const handleDeleteModule = async (
-    name: string,
-    coreFunction: CoreFunctionType | string = DEFAULT_CORE_FUNCTION
-  ): Promise<{ success: boolean; message?: string }> => {
-    // 1. Check if ANY issue is using this module
-    const usedIssues = issues.filter(
-      (i) => (i.core_function || DEFAULT_CORE_FUNCTION) === coreFunction && i.module === name
+  const handleDeleteModule = async (name: string, coreFunction: CoreFunctionType | string) => {
+    const used = requirements.filter(
+      (r) => (r.core_function || DEFAULT_CORE_FUNCTION) === coreFunction && r.module === name
     );
-
-    if (usedIssues.length > 0) {
+    if (used.length > 0) {
       return {
         success: false,
-        message: `ไม่สามารถลบกลุ่มย่อย "${name}" ได้ เนื่องจากมีปัญหา (Issue) ใช้งานกลุ่มย่อยนี้อยู่ ${usedIssues.length} รายการ\nกรุณาย้ายหรือเปลี่ยนกลุ่มย่อยของ Issue ดังกล่าวให้เรียบร้อยก่อนทำการลบ`,
+        message: `ไม่สามารถลบโมดูล "${name}" ได้ เนื่องจากมี Requirement ใช้งานอยู่ ${used.length} รายการ`,
       };
     }
 
     if (isSupabaseConfigured) {
-      const { error } = await supabase
-        .from('modules')
-        .delete()
-        .eq('core_function', coreFunction)
-        .eq('name', name);
-
-      if (error) {
-        console.error('Delete module error:', error);
-        return {
-          success: false,
-          message: 'เกิดข้อผิดพลาดในการลบกลุ่มย่อย: ' + error.message,
-        };
-      }
+      await supabase.from('modules').delete().eq('core_function', coreFunction).eq('name', name);
     }
 
-    // Optimistic state update
     setModules((prev) =>
-      prev.filter(
-        (m) => !((m.core_function || DEFAULT_CORE_FUNCTION) === coreFunction && m.name === name)
-      )
+      prev.filter((m) => !(m.core_function === coreFunction && m.name === name))
     );
-
-    if (explorerModule === name) {
-      setExplorerModule(null);
-    }
-
     return { success: true };
   };
 
-  // Add Team Member
-  const handleAddTeamMember = async (name: string) => {
-    if (isSupabaseConfigured) {
-      await supabase.from('team_members').insert({ name, role: 'Member' });
-      const { data } = await supabase.from('team_members').select('*').order('name');
-      if (data) setTeamMembers(data);
-    } else {
-      setTeamMembers((prev) => [...prev, { id: Date.now(), name, role: 'Member' }]);
-    }
-  };
-
-  // Export Excel with progress overlay
-  const handleExportExcel = async (targetIssues: Issue[], scopeTitle?: string) => {
-    if (!targetIssues || targetIssues.length === 0) {
-      alert('ไม่มีรายการปัญหาสำหรับ Export');
+  // Export Excel
+  const handleExportExcel = async (targetReqs: Requirement[], scopeTitle?: string) => {
+    if (!targetReqs || targetReqs.length === 0) {
+      alert('ไม่มีรายการ Requirement สำหรับ Export');
       return;
     }
 
     setExportProgress({
       active: true,
       current: 0,
-      total: targetIssues.length,
-      message: 'กำลังเตรียมโครงสร้างรายงาน Excel (Index + แยกราย Sheet)...',
+      total: targetReqs.length,
+      message: 'กำลังเตรียมโครงสร้างรายงาน Excel...',
     });
 
     try {
-      const { exportIssuesToExcel } = await import('@/lib/excel');
-      await exportIssuesToExcel(targetIssues, {
+      const { exportRequirementsToExcel } = await import('@/lib/excel');
+      await exportRequirementsToExcel(targetReqs, {
         scopeTitle,
         onProgress: (p) => {
           setExportProgress({
@@ -869,9 +638,9 @@ export default function HomePage() {
           });
         },
       });
-    } catch (err) {
-      console.error('Export Excel error:', err);
-      alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Excel: ' + ((err as Error)?.message || 'Unknown error'));
+    } catch (err: any) {
+      console.error('Export error:', err);
+      alert('เกิดข้อผิดพลาดในการสร้าง Excel: ' + (err?.message || err));
     } finally {
       setExportProgress(null);
     }
@@ -882,32 +651,22 @@ export default function HomePage() {
     presetModule?: string,
     presetPriority?: PriorityType
   ) => {
-    setEditingIssue(null);
+    setEditingRequirement(null);
     setModalPresetCore(presetCore ?? (activeTab === 'explorer' && explorerCore ? explorerCore : DEFAULT_CORE_FUNCTION));
     setModalPresetModule(presetModule ?? (activeTab === 'explorer' && explorerModule ? explorerModule : undefined));
     setModalPresetPriority(presetPriority);
     setIsModalOpen(true);
   };
 
-  const handleCopySql = async () => {
-    try {
-      await navigator.clipboard.writeText(MIGRATION_SQL_SNIPPET);
-      setCopiedSql(true);
-      setTimeout(() => setCopiedSql(false), 2500);
-    } catch {
-      // Fallback ignored
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#F4F8FD] text-slate-900 pb-20">
       {/* Top Navigation Bar - Jiffy & PTT RM CI */}
       <nav className="sticky top-0 z-30 shadow-md">
-        {/* Top Clean White Brand Header (Transparent Logos blend seamlessly) */}
+        {/* Brand Header */}
         <div className="bg-white/95 backdrop-blur-md border-b border-[#D8E9FF]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16 gap-3">
-              {/* Transparent Brand Logos + Title */}
+              {/* Brand Logos + Title */}
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -925,12 +684,12 @@ export default function HomePage() {
                   />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-sm sm:text-lg font-extrabold text-[#0C2553] leading-none truncate">
-                    Jiffy Requirement Tracker ( New Pos Jiify)
+                  <h1 className="text-sm sm:text-lg font-black text-[#044492] leading-none truncate">
+                    Jiffy Requirement Tracker ( New Pos Jiffy)
                   </h1>
                   <p className="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5 truncate">
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0086FF] shrink-0" />
-                    VTec Pos Retail • Jiffy Project
+                    VTec Pos Retail • New POS Jiffy Requirement Management
                   </p>
                 </div>
               </div>
@@ -942,20 +701,21 @@ export default function HomePage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-[#EFF7FF] hover:bg-[#DCEEFF] text-[#044492] rounded-xl text-xs sm:text-sm font-bold border border-[#B8DCFF] shadow-2xs transition-all hover:scale-[1.02] active:scale-95"
-                  title="เข้าระบบ Back Office / Cloud HQ (Dev) — https://ras-dev.pttrm.com/backoffice/"
+                  title="เข้าระบบ Back Office / Cloud HQ (Dev)"
                 >
                   <Globe className="w-4 h-4 text-[#0086FF] shrink-0" />
                   <span className="hidden sm:inline">เข้าระบบ Cloud HQ (Dev)</span>
-                  <span className="sm:hidden">Cloud HQ (Dev)</span>
+                  <span className="sm:hidden">Cloud HQ</span>
                   <ExternalLink className="w-3.5 h-3.5 text-[#0086FF]/80 shrink-0" />
                 </a>
 
                 <button
+                  type="button"
                   onClick={() => openCreateModal()}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 bg-[#FFCB06] hover:bg-[#F5C000] text-[#0C2553] rounded-xl text-xs sm:text-sm font-extrabold shadow-sm border border-[#E5B300] transition-all hover:scale-[1.03] active:scale-95 ring-2 ring-[#FFCB06]/35"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 bg-[#FFCB06] hover:bg-[#E5B600] text-slate-950 rounded-xl text-xs sm:text-sm font-black shadow-md border border-[#E5B300] transition-all hover:scale-[1.03] active:scale-95"
                 >
                   <Plus className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
-                  <span>+ บันทึก Requirement ใหม่</span>
+                  <span>+ เพิ่ม Requirement</span>
                 </button>
               </div>
             </div>
@@ -963,51 +723,53 @@ export default function HomePage() {
         </div>
 
         {/* View Switcher Tabs Bar - Jiffy Royal Blue CI */}
-        <div className="bg-gradient-to-r from-[#0C2553] via-[#044492] to-[#0074E0] text-white border-b border-[#03326C]">
+        <div className="bg-gradient-to-r from-[#06142e] via-[#044492] to-[#0086FF] text-white border-b border-[#03326C]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2">
             <div className="flex items-center space-x-1 sm:space-x-2 py-2 overflow-x-auto">
               <button
+                type="button"
                 onClick={() => setActiveTab('dashboard')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all font-bold ${
                   activeTab === 'dashboard'
-                    ? 'bg-[#FFCB06] text-[#0C2553] font-bold shadow-sm'
-                    : 'text-blue-100 hover:text-white hover:bg-white/10 font-medium'
+                    ? 'bg-[#FFCB06] text-slate-950 shadow-sm'
+                    : 'text-blue-100 hover:text-white hover:bg-white/10'
                 }`}
               >
                 <LayoutDashboard className="w-4 h-4 shrink-0" />
-                Dashboard สรุป
+                Dashboard สรุปภาพรวม
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveTab('explorer')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all font-bold ${
                   activeTab === 'explorer'
-                    ? 'bg-[#FFCB06] text-[#0C2553] font-bold shadow-sm'
-                    : 'text-blue-100 hover:text-white hover:bg-white/10 font-medium'
+                    ? 'bg-[#FFCB06] text-slate-950 shadow-sm'
+                    : 'text-blue-100 hover:text-white hover:bg-white/10'
                 }`}
               >
                 <FolderTree className="w-4 h-4 shrink-0" />
-                ดูข้อมูล Requirement แยกกลุ่ม ({issues.length})
+                ตาราง Requirement ทั้งหมด ({requirements.length})
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveTab('priority')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all font-bold ${
                   activeTab === 'priority'
-                    ? 'bg-[#FFCB06] text-[#0C2553] font-bold shadow-sm'
-                    : 'text-blue-100 hover:text-white hover:bg-white/10 font-medium'
+                    ? 'bg-[#FFCB06] text-slate-950 shadow-sm'
+                    : 'text-blue-100 hover:text-white hover:bg-white/10'
                 }`}
               >
                 <ListOrdered className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline">แยกตาม Priority (List View)</span>
-                <span className="sm:hidden">แยก Priority</span>
-                <span className="text-[11px] opacity-85">({issues.length})</span>
+                แยกตาม Priority ({requirements.length})
               </button>
             </div>
 
             {/* Quick Export & Refresh */}
             <div className="flex items-center gap-2 shrink-0">
               <button
+                type="button"
                 onClick={fetchData}
                 disabled={loading}
                 className="p-1.5 text-blue-100 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
@@ -1017,79 +779,33 @@ export default function HomePage() {
               </button>
 
               <button
-                onClick={() => handleExportExcel(issues, 'All Core Functions')}
-                disabled={issues.length === 0 || Boolean(exportProgress?.active)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:bg-white bg-white/95 border border-white/40 rounded-lg shadow-2xs transition-all disabled:opacity-50"
-                title="ดาวน์โหลดไฟล์สรุปปัญหา Excel (.xlsx) พร้อมหน้า Index และรูปภาพประกอบแยก Sheet"
+                type="button"
+                onClick={() => handleExportExcel(requirements, 'All Requirements')}
+                disabled={requirements.length === 0 || Boolean(exportProgress?.active)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-white/95 hover:bg-white rounded-xl shadow-xs transition-all disabled:opacity-50"
+                title="ดาวน์โหลดสรุป Requirement เป็น Excel (.xlsx)"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Export Excel (Index + รูป)</span>
-                <span className="sm:hidden">Export</span>
+                <span className="hidden sm:inline">Export Excel</span>
               </button>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Optional DB Migration Notice (only shown if Supabase table doesn't have core_function column yet) */}
-      {needsSchemaMigration && !dismissedMigrationBanner && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="text-xs text-amber-900 space-y-1">
-                <p className="font-extrabold">
-                  รอเพิ่มคอลัมน์ <code className="bg-amber-100 px-1.5 py-0.5 rounded">core_function</code> ในฐานข้อมูล Supabase
-                </p>
-                <p className="text-amber-800">
-                  รายการเดิมถูกจัดเข้า <b>VTec Cloud HQ</b> อัตโนมัติแล้ว หากต้องการจัดเก็บกลุ่ม <b>5 Core Functions</b> ร่วมกันทั้งทีม กรุณารัน SQL Migration ใน Supabase SQL Editor
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={handleCopySql}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-colors"
-              >
-                {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                {copiedSql ? 'คัดลอก SQL แล้ว' : 'คัดลอก SQL'}
-              </button>
-              <a
-                href={SUPABASE_SQL_EDITOR_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-colors"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                เปิด Supabase SQL
-              </a>
-              <button
-                type="button"
-                onClick={() => setDismissedMigrationBanner(true)}
-                className="p-1.5 text-amber-700 hover:bg-amber-200/70 rounded-lg"
-                title="ซ่อนแจ้งเตือน"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content Area */}
+      {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-5 space-y-5">
-        {/* SIT Readiness Countdown & 3-Zone Risk Infographic */}
-        <SitCountdownBanner issues={issues} />
+        {/* SIT Countdown Readiness Banner at top of main view */}
+        <SitCountdownBanner requirements={requirements} />
 
         {/* TAB 1: DASHBOARD VIEW */}
         {activeTab === 'dashboard' && (
           <DashboardView
-            issues={issues}
+            issues={requirements}
             teamMembers={teamMembers}
             modules={modules}
-            onSelectIssue={(issue) => {
-              setSelectedIssue(issue);
+            onSelectIssue={(req) => {
+              setSelectedRequirement(req);
               setDetailModalOpen(true);
             }}
             onSelectCoreFunction={(core) => {
@@ -1099,7 +815,8 @@ export default function HomePage() {
                 status: '',
                 priority: '',
                 module: '',
-                raise_by: '',
+                requested_by: '',
+                dev_assigned: '',
               });
               setExplorerCore(core);
               setExplorerModule(null);
@@ -1112,7 +829,8 @@ export default function HomePage() {
                 status: '',
                 priority: '',
                 module: '',
-                raise_by: '',
+                requested_by: '',
+                dev_assigned: '',
               });
               setExplorerCore((core as CoreFunctionType) || DEFAULT_CORE_FUNCTION);
               setExplorerModule(mod);
@@ -1125,7 +843,8 @@ export default function HomePage() {
                 status: st,
                 priority: '',
                 module: '',
-                raise_by: '',
+                requested_by: '',
+                dev_assigned: '',
               });
               setExplorerCore(null);
               setExplorerModule(null);
@@ -1138,7 +857,8 @@ export default function HomePage() {
                 status: '',
                 priority: pr,
                 module: '',
-                raise_by: '',
+                requested_by: '',
+                dev_assigned: '',
               });
               setExplorerCore(null);
               setExplorerModule(null);
@@ -1151,7 +871,22 @@ export default function HomePage() {
                 status: '',
                 priority: '',
                 module: '',
-                raise_by: rep,
+                requested_by: rep,
+                dev_assigned: '',
+              });
+              setExplorerCore(null);
+              setExplorerModule(null);
+              setActiveTab('explorer');
+            }}
+            onFilterByDev={(dev) => {
+              setFilter({
+                search: '',
+                core_function: '',
+                status: '',
+                priority: '',
+                module: '',
+                requested_by: '',
+                dev_assigned: dev,
               });
               setExplorerCore(null);
               setExplorerModule(null);
@@ -1164,7 +899,8 @@ export default function HomePage() {
                 status: '',
                 priority: '',
                 module: '',
-                raise_by: '',
+                requested_by: '',
+                dev_assigned: '',
               });
               setExplorerCore(null);
               setExplorerModule(null);
@@ -1179,10 +915,10 @@ export default function HomePage() {
           />
         )}
 
-        {/* TAB 2: HIERARCHICAL GROUPED EXPLORER VIEW (Core Function -> Sub-module) */}
+        {/* TAB 2: EXPLORER VIEW (Table Grid with Filter Tree) */}
         {activeTab === 'explorer' && (
           <IssueExplorerView
-            issues={issues}
+            issues={requirements}
             modules={modules}
             teamMembers={teamMembers}
             filter={filter}
@@ -1191,14 +927,14 @@ export default function HomePage() {
             selectedModule={explorerModule}
             onSelectCore={setExplorerCore}
             onSelectModule={setExplorerModule}
-            onSelectIssue={(issue) => {
-              setSelectedIssue(issue);
+            onSelectIssue={(req) => {
+              setSelectedRequirement(req);
               setDetailModalOpen(true);
             }}
-            onEditIssue={(issue) => {
-              setEditingIssue(issue);
-              setModalPresetCore((issue.core_function as CoreFunctionType) || DEFAULT_CORE_FUNCTION);
-              setModalPresetModule(issue.module);
+            onEditIssue={(req) => {
+              setEditingRequirement(req);
+              setModalPresetCore((req.core_function as CoreFunctionType) || DEFAULT_CORE_FUNCTION);
+              setModalPresetModule(req.module);
               setIsModalOpen(true);
             }}
             onDeleteIssue={handleProtectedDeleteRequest}
@@ -1210,13 +946,13 @@ export default function HomePage() {
           />
         )}
 
-        {/* TAB 3: PRIORITY LIST VIEW (1.High -> 2.Medium -> 3.Low) */}
+        {/* TAB 3: PRIORITY LIST VIEW (High -> Medium -> Low) */}
         {activeTab === 'priority' && (
           <PriorityListView
-            issues={issues}
+            issues={requirements}
             modules={modules}
-            onSelectIssue={(issue) => {
-              setSelectedIssue(issue);
+            onSelectIssue={(req) => {
+              setSelectedRequirement(req);
               setDetailModalOpen(true);
             }}
             onCreateIssue={(presetCore, presetModule, presetPriority) =>
@@ -1229,7 +965,7 @@ export default function HomePage() {
 
       {/* Excel Export Progress Overlay */}
       {exportProgress?.active && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200 space-y-4">
             <div className="flex items-center gap-3">
               <div className="h-11 w-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
@@ -1237,7 +973,7 @@ export default function HomePage() {
               </div>
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900">
-                  กำลังสร้างไฟล์สรุปปัญหา Excel (.xlsx)
+                  กำลังสร้างไฟล์สรุป Requirement Excel (.xlsx)
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">{exportProgress.message}</p>
               </div>
@@ -1248,96 +984,83 @@ export default function HomePage() {
                 <span>ความคืบหน้า</span>
                 <span>
                   {exportProgress.total > 0
-                    ? `${Math.min(100, Math.round((exportProgress.current / exportProgress.total) * 100))}%`
-                    : '...'}
+                    ? `${Math.round((exportProgress.current / exportProgress.total) * 100)}%`
+                    : '100%'}
                 </span>
               </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300 rounded-full"
                   style={{
                     width: `${
                       exportProgress.total > 0
-                        ? Math.max(8, Math.min(100, Math.round((exportProgress.current / exportProgress.total) * 100)))
-                        : 25
+                        ? Math.min(100, Math.round((exportProgress.current / exportProgress.total) * 100))
+                        : 100
                     }%`,
                   }}
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
                 />
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 text-center">
-              ระบบกำลังจัดเตรียมหน้า Index และฝังรูปภาพประกอบลงในแต่ละ Sheet กรุณารอสักครู่...
-            </p>
           </div>
         </div>
       )}
 
-      {/* Lazy-Loaded Modals */}
-      {isModalOpen && (
-        <IssueModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingIssue(null);
-            setModalPresetCore(undefined);
-            setModalPresetModule(undefined);
-            setModalPresetPriority(undefined);
-          }}
-          onSave={handleSaveIssue}
-          initialData={editingIssue}
-          suggestedLogId={nextLogId}
-          defaultCoreFunction={modalPresetCore}
-          defaultModule={modalPresetModule}
-          defaultPriority={modalPresetPriority}
-          modules={modules}
-          teamMembers={teamMembers}
-          onAddModule={handleAddModule}
-          onAddTeamMember={handleAddTeamMember}
-        />
-      )}
+      {/* Requirement Create / Edit Modal */}
+      <IssueModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingRequirement(null);
+        }}
+        onSave={handleSaveRequirement}
+        initialData={editingRequirement}
+        suggestedLogId={nextReqId}
+        defaultCoreFunction={modalPresetCore}
+        defaultModule={modalPresetModule}
+        defaultPriority={modalPresetPriority}
+        modules={modules}
+        teamMembers={teamMembers}
+        onAddModule={handleAddModule}
+      />
 
-      {detailModalOpen && selectedIssue && (
-        <IssueDetailModal
-          isOpen={detailModalOpen}
-          onClose={() => {
-            setDetailModalOpen(false);
-            setSelectedIssue(null);
-          }}
-          issue={selectedIssue}
-          onEdit={(issueToEdit) => {
-            setDetailModalOpen(false);
-            setEditingIssue(issueToEdit);
-            setModalPresetCore((issueToEdit.core_function as CoreFunctionType) || DEFAULT_CORE_FUNCTION);
-            setModalPresetModule(issueToEdit.module);
-            setIsModalOpen(true);
-          }}
-          onDelete={handleProtectedDeleteRequest}
-          onStatusChange={handleStatusChange}
-          onUpdateIssue={handleInlineUpdateIssue}
-          teamMembers={teamMembers}
-          suggestedUpdaters={knownUpdaters}
-        />
-      )}
+      {/* Requirement Detail Modal */}
+      <IssueDetailModal
+        isOpen={detailModalOpen}
+        onClose={() => {
+          setDetailModalOpen(false);
+          setSelectedRequirement(null);
+        }}
+        issue={selectedRequirement}
+        onEdit={(req) => {
+          setDetailModalOpen(false);
+          setEditingRequirement(req);
+          setIsModalOpen(true);
+        }}
+        onDelete={handleProtectedDeleteRequest}
+        onStatusChange={handleStatusChange}
+        onUpdateIssue={handleInlineUpdateRequirement}
+        teamMembers={teamMembers}
+      />
 
-      {(deleteWarningVisible || Boolean(pendingDeleteIssue)) && (
-        <DeleteGuardOverlay
-          warningVisible={deleteWarningVisible}
-          onDismissWarning={() => {
-            if (deleteWarningTimerRef.current) {
-              clearTimeout(deleteWarningTimerRef.current);
-              deleteWarningTimerRef.current = null;
-            }
-            setDeleteWarningVisible(false);
-          }}
-          confirmIssue={pendingDeleteIssue}
-          isDeleting={isDeletingIssue}
-          onCancelConfirm={() => {
-            deleteClickTrackerRef.current = { issueId: '', count: 0, lastClickAt: 0 };
-            setPendingDeleteIssue(null);
-          }}
-          onConfirmDelete={handleConfirmDeleteIssue}
-        />
-      )}
+      {/* Protected 5-Click Admin Delete Guard */}
+      <DeleteGuardOverlay
+        warningVisible={deleteWarningVisible}
+        onDismissWarning={() => {
+          setDeleteWarningVisible(false);
+          setPendingDeleteId(null);
+        }}
+        confirmIssue={requirements.find((r) => r.id === pendingDeleteId) || null}
+        isDeleting={isDeleting}
+        onCancelConfirm={() => {
+          setDeleteWarningVisible(false);
+          setPendingDeleteId(null);
+        }}
+        onConfirmDelete={async () => {
+          if (pendingDeleteId) {
+            await executeDelete(pendingDeleteId);
+          }
+        }}
+      />
     </div>
   );
 }

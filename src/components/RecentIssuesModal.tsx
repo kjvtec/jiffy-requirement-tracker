@@ -37,11 +37,11 @@ export default function RecentIssuesModal({
   const [recentSearch, setRecentSearch] = useState('');
   const [recentStatusFilter, setRecentStatusFilter] = useState('ALL');
 
-  // Pure Z-A sorting by Issue Number descending (ISSUE_39 -> ISSUE_1)
+  // Pure Z-A sorting by Req Number descending
   const issuesSortedZa = useMemo(() => {
     return [...issues].sort((a, b) => {
-      const numA = parseIssueNumber(a.log_id);
-      const numB = parseIssueNumber(b.log_id);
+      const numA = parseIssueNumber(a.req_id || a.log_id || '');
+      const numB = parseIssueNumber(b.req_id || b.log_id || '');
       return numB - numA;
     });
   }, [issues]);
@@ -69,11 +69,12 @@ export default function RecentIssuesModal({
       }
       if (q) {
         const hay = [
-          item.log_id,
+          item.req_id || item.log_id || '',
+          item.title || '',
           item.details,
           item.module,
           item.core_function || DEFAULT_CORE_FUNCTION,
-          item.raise_by,
+          item.requested_by || item.raise_by || '',
           item.status,
           item.priority,
         ]
@@ -110,7 +111,7 @@ export default function RecentIssuesModal({
                 </span>
               </h3>
               <p className="text-[11px] text-blue-100">
-                เรียงจากหมายเลขล่าสุดลงไป (มาก ➔ น้อย: {latestIssue?.log_id || ''} ➔ ISSUE_1)
+                เรียงจากหมายเลขล่าสุดลงไป (มาก ➔ น้อย: {latestIssue?.req_id || latestIssue?.log_id || ''} ➔ JFY-REQ-01)
               </p>
             </div>
           </div>
@@ -206,7 +207,7 @@ export default function RecentIssuesModal({
                             : 'bg-slate-100 text-slate-800 border-slate-200 group-hover:bg-[#0086FF] group-hover:text-white transition-colors'
                         }`}
                       >
-                        {issue.log_id}
+                        {issue.req_id || issue.log_id}
                       </span>
 
                       {isLatest && (

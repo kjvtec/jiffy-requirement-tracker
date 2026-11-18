@@ -7,11 +7,9 @@ import {
   Layers,
   FolderTree,
   FolderOpen,
-  Folder,
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  ArrowLeft,
   ArrowUpDown,
   Plus,
   Download,
@@ -20,19 +18,18 @@ import {
   Edit,
   Trash2,
   Flame,
-  X,
   CheckCircle2,
-  FolderPlus,
-  HelpCircle,
-  UserCheck,
+  Code2,
+  TestTube2,
+  FileText,
+  Clock,
+  User,
+  Sparkles,
   Settings,
-  ShieldAlert,
-  AlertTriangle,
-  Check,
 } from 'lucide-react';
 import {
-  Issue,
-  IssueFilter,
+  Requirement,
+  RequirementFilter,
   SystemModule,
   TeamMember,
   CORE_FUNCTIONS,
@@ -40,9 +37,11 @@ import {
   CORE_FUNCTION_META,
   DEFAULT_CORE_FUNCTION,
   DEFAULT_MODULES_BY_CORE,
+  REQUIREMENT_STATUSES,
+  RequirementStatusType,
 } from '@/types';
-import { getStatusBadgeClass } from '@/lib/status';
-import { getLatestTimelineInfo } from '@/lib/timeline';
+import { getStatusBadgeClass, getStatusShortTh } from '@/lib/status';
+import { parseIssueNumber } from '@/lib/issueSort';
 import SubModuleModals, {
   RenameTarget,
   DeleteBlockedNotice,
@@ -50,20 +49,20 @@ import SubModuleModals, {
 } from './SubModuleModals';
 
 interface IssueExplorerViewProps {
-  issues: Issue[];
+  issues: Requirement[];
   modules: SystemModule[];
   teamMembers: TeamMember[];
-  filter: IssueFilter;
-  onFilterChange: React.Dispatch<React.SetStateAction<IssueFilter>>;
+  filter: RequirementFilter;
+  onFilterChange: React.Dispatch<React.SetStateAction<RequirementFilter>>;
   selectedCore: CoreFunctionType | null;
   selectedModule: string | null;
   onSelectCore: (core: CoreFunctionType | null) => void;
   onSelectModule: (mod: string | null) => void;
-  onSelectIssue: (issue: Issue) => void;
-  onEditIssue: (issue: Issue) => void;
+  onSelectIssue: (issue: Requirement) => void;
+  onEditIssue: (issue: Requirement) => void;
   onDeleteIssue: (issueId: string) => Promise<void>;
   onCreateIssue: (presetCore?: CoreFunctionType, presetModule?: string) => void;
-  onExportExcel: (targetIssues: Issue[], scopeTitle?: string) => void;
+  onExportExcel: (targetIssues: Requirement[], scopeTitle?: string) => void;
   onAddModule?: (name: string, coreFunction: CoreFunctionType | string) => Promise<void>;
   onUpdateModule?: (oldName: string, newName: string, coreFunction: CoreFunctionType | string) => Promise<void>;
   onDeleteModule?: (name: string, coreFunction: CoreFunctionType | string) => Promise<{ success: boolean; message?: string }>;
@@ -75,18 +74,18 @@ const getPriorityStyle = (priority: string) => {
   return 'bg-blue-50 text-blue-700 border-blue-200';
 };
 
-interface IssueRowsTableProps {
-  items: Issue[];
-  sortField: keyof Issue;
+interface RequirementTableProps {
+  items: Requirement[];
+  sortField: keyof Requirement;
   sortAsc: boolean;
-  onSort: (field: keyof Issue) => void;
-  onSelectIssue: (issue: Issue) => void;
-  onEditIssue: (issue: Issue) => void;
+  onSort: (field: keyof Requirement) => void;
+  onSelectIssue: (issue: Requirement) => void;
+  onEditIssue: (issue: Requirement) => void;
   onDeleteIssue: (issueId: string) => Promise<void>;
   showCoreColumn?: boolean;
 }
 
-const IssueRowsTable = React.memo(function IssueRowsTable({
+const RequirementTable = React.memo(function RequirementTable({
   items,
   sortField,
   sortAsc,
@@ -95,21 +94,21 @@ const IssueRowsTable = React.memo(function IssueRowsTable({
   onEditIssue,
   onDeleteIssue,
   showCoreColumn = false,
-}: IssueRowsTableProps) {
+}: RequirementTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="bg-slate-50/90 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
             <th
-              onClick={() => onSort('log_id')}
-              className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors w-28"
+              onClick={() => onSort('req_id')}
+              className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors w-32"
             >
               <div className="flex items-center gap-1">
-                Issue No
-                <ArrowUpDown className={`w-3 h-3 ${sortField === 'log_id' ? 'text-indigo-600' : 'text-slate-400'}`} />
-                {sortField === 'log_id' && (
-                  <span className="text-[9px] text-indigo-600">{sortAsc ? '↑' : '↓'}</span>
+                Req ID
+                <ArrowUpDown className={`w-3 h-3 ${sortField === 'req_id' ? 'text-[#0086FF]' : 'text-slate-400'}`} />
+                {sortField === 'req_id' && (
+                  <span className="text-[9px] text-[#0086FF]">{sortAsc ? '↑' : '↓'}</span>
                 )}
               </div>
             </th>
@@ -120,14 +119,14 @@ const IssueRowsTable = React.memo(function IssueRowsTable({
                 className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors w-36"
               >
                 <div className="flex items-center gap-1">
-                  กลุ่มย่อย
+                  โมดูล
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </div>
               </th>
             )}
             <th
               onClick={() => onSort('priority')}
-              className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors w-28"
+              className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors w-24"
             >
               <div className="flex items-center gap-1">
                 Priority
@@ -136,50 +135,49 @@ const IssueRowsTable = React.memo(function IssueRowsTable({
             </th>
             <th
               onClick={() => onSort('status')}
-              className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors w-28"
+              className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors w-32"
             >
               <div className="flex items-center gap-1">
-                Status
+                สถานะ (Status)
                 <ArrowUpDown className="w-3 h-3 text-slate-400" />
               </div>
             </th>
-            <th className="py-3 px-4 min-w-[240px]">รายละเอียดปัญหา & วิธีแก้ไข</th>
-            <th className="py-3 px-4 w-32">ผู้แจ้ง / วันที่</th>
-            <th className="py-3 px-4 text-right w-28">จัดการ</th>
+            <th className="py-3 px-4 min-w-[280px]">หัวข้อ & รายละเอียด Requirement</th>
+            <th className="py-3 px-4 w-36">Dev ผู้รับผิดชอบ</th>
+            <th className="py-3 px-4 w-32">ผู้ขอ / วันที่</th>
+            <th className="py-3 px-4 text-right w-24">จัดการ</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
-          {items.map((issue) => {
-            const coreFn = (issue.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType;
+          {items.map((req) => {
+            const coreFn = (req.core_function || DEFAULT_CORE_FUNCTION) as CoreFunctionType;
             const meta = CORE_FUNCTION_META[coreFn] || CORE_FUNCTION_META[DEFAULT_CORE_FUNCTION];
-            const isClosed = issue.status === 'Closed';
-            const isNeedInfo = issue.status === 'Need Info';
-            const latestInfo = getLatestTimelineInfo(issue);
-            const timelinePreview = latestInfo.latestMessage || issue.resolution;
+            const isDone = req.status === 'Done' || (req.status as string) === 'Closed';
+            const displayId = req.req_id || (req as any).log_id || 'REQ';
 
             return (
               <tr
-                key={issue.id}
-                onClick={() => onSelectIssue(issue)}
+                key={req.id}
+                onClick={() => onSelectIssue(req)}
                 className={`transition-colors cursor-pointer group ${
-                  isClosed
-                    ? 'bg-slate-50/80 opacity-75 hover:opacity-100 hover:bg-slate-100/70'
-                    : isNeedInfo
-                      ? 'bg-orange-50/45 hover:bg-orange-50/80 border-l-4 border-l-orange-500'
-                      : 'hover:bg-[#F4F9FF]'
+                  isDone
+                    ? 'bg-slate-50/80 opacity-80 hover:opacity-100 hover:bg-slate-100/70'
+                    : 'hover:bg-[#F4F9FF]'
                 }`}
               >
+                {/* 1. Req ID */}
                 <td className="py-3.5 px-4 align-top">
                   <div className="flex flex-col items-start gap-1">
                     <span className="font-mono text-xs font-bold text-[#044492] bg-[#EFF7FF] px-2.5 py-1 rounded-lg border border-[#CFE4FF] group-hover:bg-[#0086FF] group-hover:border-[#0086FF] group-hover:text-white transition-colors">
-                      {issue.log_id}
+                      {displayId}
                     </span>
-                    <span className="text-[10px] font-medium text-slate-400 px-1">
-                      {issue.type || 'Issue'}
+                    <span className="text-[10px] font-medium text-slate-500 px-1">
+                      {req.type || 'New Feature'}
                     </span>
                   </div>
                 </td>
 
+                {/* 2. Core / Module */}
                 <td className="py-3.5 px-4 align-top">
                   {showCoreColumn && (
                     <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border mb-1 ${meta.badgeBg} ${meta.badgeText} ${meta.badgeBorder}`}>
@@ -189,111 +187,111 @@ const IssueRowsTable = React.memo(function IssueRowsTable({
                   <div>
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/80">
                       <Layers className="w-3 h-3 text-slate-500" />
-                      {issue.module}
+                      {req.module}
                     </span>
                   </div>
                 </td>
 
+                {/* 3. Priority */}
                 <td className="py-3.5 px-4 align-top">
-                  <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-lg border ${getPriorityStyle(issue.priority)}`}>
-                    {issue.priority}
+                  <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-lg border ${getPriorityStyle(req.priority)}`}>
+                    {req.priority}
                   </span>
                 </td>
 
+                {/* 4. Status */}
                 <td className="py-3.5 px-4 align-top">
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg border ${getStatusBadgeClass(
-                      issue.status
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg border ${getStatusBadgeClass(
+                      req.status
                     )}`}
                   >
-                    {isNeedInfo && <HelpCircle className="w-3 h-3 text-orange-600 shrink-0" />}
-                    {issue.status}
+                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                    {req.status}
                   </span>
-                  {isNeedInfo && (
-                    <span className="block text-[10px] font-bold text-orange-700 mt-1">
-                      รอข้อมูลเพิ่ม
-                    </span>
-                  )}
+                  <span className="block text-[10px] font-medium text-slate-500 mt-1">
+                    {getStatusShortTh(req.status)}
+                  </span>
                 </td>
 
+                {/* 5. Title & Details */}
                 <td className="py-3.5 px-4 align-top">
-                  <p className="text-slate-800 font-medium line-clamp-2 text-xs sm:text-sm leading-relaxed">
-                    {issue.details}
+                  <div className="font-bold text-slate-900 group-hover:text-[#0086FF] transition-colors line-clamp-1 text-xs sm:text-sm">
+                    {req.title || req.details}
+                  </div>
+                  <p className="text-slate-600 font-normal line-clamp-2 text-xs leading-relaxed mt-1">
+                    {req.details}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                    {issue.images && issue.images.length > 0 && (
+                    {req.images && req.images.length > 0 && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
                         <ImageIcon className="w-3 h-3" />
-                        {issue.images.length} รูปแนบ
+                        {req.images.length} รูป Wireframe
                       </span>
                     )}
-                    {timelinePreview && (
-                      <span
-                        className={`text-[11px] px-2 py-0.5 rounded-md border line-clamp-1 max-w-sm ${
-                          isNeedInfo
-                            ? 'text-orange-800 bg-orange-50 border-orange-200 font-medium'
-                            : 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                        }`}
-                      >
-                        {latestInfo.latestAuthor
-                          ? `${latestInfo.latestAuthor}: ${timelinePreview}`
-                          : `แก้ไข: ${timelinePreview}`}
-                      </span>
-                    )}
-                    {issue.closed_version && (
-                      <span className="text-[10px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                        {issue.closed_version}
+                    {req.remark && (
+                      <span className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md line-clamp-1 max-w-sm">
+                        หมายเหตุ: {req.remark}
                       </span>
                     )}
                   </div>
                 </td>
 
+                {/* 6. Dev Assigned & Target Version */}
                 <td className="py-3.5 px-4 align-top">
-                  <p className="text-xs font-bold text-slate-800">{issue.raise_by}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    {issue.raise_date ? new Date(issue.raise_date).toLocaleDateString('th-TH') : '-'}
-                  </p>
-                  {isNeedInfo && (
-                    <p className="text-[10px] text-orange-700 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded font-bold mt-1 inline-block">
-                      รอ {issue.raise_by} ตอบ
-                    </p>
-                  )}
-                  {latestInfo.latestAuthor && (
-                    <p className="text-[10px] text-indigo-600 font-semibold mt-1 flex items-center gap-1">
-                      <UserCheck className="w-3 h-3 shrink-0" />
-                      อัปเดต: {latestInfo.latestAuthor}
-                    </p>
-                  )}
-                  {issue.closed_by && (
-                    <p className="text-[10px] text-emerald-600 font-medium mt-0.5">
-                      ปิดโดย: {issue.closed_by}
-                    </p>
+                  {req.dev_assigned || (req as any).closed_by ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200/80 w-fit">
+                        <Code2 className="w-3 h-3 text-indigo-600" />
+                        {req.dev_assigned || (req as any).closed_by}
+                      </span>
+                      {req.target_version && (
+                        <span className="text-[10px] font-mono font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-1">
+                          {req.target_version}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">ยังไม่มอบหมาย</span>
                   )}
                 </td>
 
+                {/* 7. Requested By & Date */}
+                <td className="py-3.5 px-4 align-top">
+                  <p className="text-xs font-bold text-slate-800">
+                    {req.requested_by || (req as any).raise_by || 'Unknown'}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {req.request_date || (req as any).raise_date
+                      ? new Date(req.request_date || (req as any).raise_date).toLocaleDateString('th-TH')
+                      : '-'}
+                  </p>
+                </td>
+
+                {/* 8. Actions */}
                 <td className="py-3.5 px-4 align-top text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-1">
                     <button
                       type="button"
-                      onClick={() => onSelectIssue(issue)}
+                      onClick={() => onSelectIssue(req)}
                       className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                      title="ดูรายละเอียด & อัปเดต"
+                      title="ดูรายละเอียด Requirement"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => onEditIssue(issue)}
+                      onClick={() => onEditIssue(req)}
                       className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                      title="แก้ไขทุกช่อง"
+                      title="แก้ไข Requirement"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => onDeleteIssue(issue.id)}
+                      onClick={() => onDeleteIssue(req.id)}
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="ลบ"
+                      title="ลบ Requirement"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -309,7 +307,7 @@ const IssueRowsTable = React.memo(function IssueRowsTable({
 });
 
 export default function IssueExplorerView({
-  issues,
+  issues: requirements,
   modules,
   teamMembers,
   filter,
@@ -327,14 +325,14 @@ export default function IssueExplorerView({
   onUpdateModule,
   onDeleteModule,
 }: IssueExplorerViewProps) {
-  const [sortField, setSortField] = useState<keyof Issue>('log_id');
+  const [sortField, setSortField] = useState<keyof Requirement>('req_id');
   const [sortAsc, setSortAsc] = useState(false);
   const [collapsedSubModules, setCollapsedSubModules] = useState<Record<string, boolean>>({});
   const [addingSubModule, setAddingSubModule] = useState(false);
   const [newSubModuleName, setNewSubModuleName] = useState('');
   const [savingSubModule, setSavingSubModule] = useState(false);
 
-  // Sub-module management states
+  // Sub-module management modal states
   const [managingModules, setManagingModules] = useState(false);
   const [manageSearch, setManageSearch] = useState('');
   const [renameTarget, setRenameTarget] = useState<{ oldName: string; core: CoreFunctionType | string } | null>(null);
@@ -358,7 +356,7 @@ export default function IssueExplorerView({
       setRenameTarget(null);
       setRenameValue('');
     } catch (e: any) {
-      alert('เกิดข้อผิดพลาดในการแก้ไขชื่อกลุ่มย่อย: ' + (e?.message || e));
+      alert('เกิดข้อผิดพลาดในการแก้ไขชื่อโมดูล: ' + (e?.message || e));
     } finally {
       setSavingRename(false);
     }
@@ -383,18 +381,18 @@ export default function IssueExplorerView({
       setDeletingModule(true);
       const res = await onDeleteModule(confirmDeleteTarget.moduleName, confirmDeleteTarget.core);
       if (!res.success) {
-        alert(res.message || 'ไม่สามารถลบกลุ่มย่อยนี้ได้');
+        alert(res.message || 'ไม่สามารถลบโมดูลนี้ได้');
       } else {
         setConfirmDeleteTarget(null);
       }
     } catch (e: any) {
-      alert('เกิดข้อผิดพลาดในการลบกลุ่มย่อย: ' + (e?.message || e));
+      alert('เกิดข้อผิดพลาดในการลบโมดูล: ' + (e?.message || e));
     } finally {
       setDeletingModule(false);
     }
   };
 
-  const handleSort = (field: keyof Issue) => {
+  const handleSort = (field: keyof Requirement) => {
     if (sortField === field) {
       setSortAsc((prev) => !prev);
     } else {
@@ -403,16 +401,16 @@ export default function IssueExplorerView({
     }
   };
 
-  const sortIssues = useMemo(() => {
-    return (list: Issue[]) =>
+  const sortRequirements = useMemo(() => {
+    return (list: Requirement[]) =>
       [...list].sort((a, b) => {
-        const isClosedA = a.status === 'Closed' ? 1 : 0;
-        const isClosedB = b.status === 'Closed' ? 1 : 0;
-        if (isClosedA !== isClosedB) return isClosedA - isClosedB;
+        const isDoneA = a.status === 'Done' || (a.status as string) === 'Closed' ? 1 : 0;
+        const isDoneB = b.status === 'Done' || (b.status as string) === 'Closed' ? 1 : 0;
+        if (isDoneA !== isDoneB) return isDoneA - isDoneB;
 
-        if (sortField === 'log_id') {
-          const numA = parseInt(a.log_id.replace(/\D/g, '') || '0', 10);
-          const numB = parseInt(b.log_id.replace(/\D/g, '') || '0', 10);
+        if (sortField === 'req_id') {
+          const numA = parseIssueNumber(a.req_id || (a as any).log_id || '');
+          const numB = parseIssueNumber(b.req_id || (b as any).log_id || '');
           return sortAsc ? numA - numB : numB - numA;
         }
         const valA = String(a[sortField] ?? '').toLowerCase();
@@ -423,31 +421,35 @@ export default function IssueExplorerView({
       });
   }, [sortField, sortAsc]);
 
-  // Apply text / status / priority / reporter filters globally
-  const matchingIssues = useMemo(() => {
-    const filtered = issues.filter((item) => {
+  // Apply search and dropdown filters
+  const matchingRequirements = useMemo(() => {
+    const filtered = requirements.filter((item) => {
       if (filter.search) {
         const q = filter.search.toLowerCase();
-        const matchLogId = item.log_id.toLowerCase().includes(q);
-        const matchDetails = item.details.toLowerCase().includes(q);
-        const matchResolution = item.resolution?.toLowerCase().includes(q);
-        const matchRemark = item.remark?.toLowerCase().includes(q);
-        const matchModule = item.module?.toLowerCase().includes(q);
-        const matchCore = (item.core_function || DEFAULT_CORE_FUNCTION).toLowerCase().includes(q);
-        if (!matchLogId && !matchDetails && !matchResolution && !matchRemark && !matchModule && !matchCore) {
+        const matchId = (item.req_id || (item as any).log_id || '').toLowerCase().includes(q);
+        const matchTitle = (item.title || '').toLowerCase().includes(q);
+        const matchDetails = (item.details || '').toLowerCase().includes(q);
+        const matchRemark = (item.remark || '').toLowerCase().includes(q);
+        const matchModule = (item.module || '').toLowerCase().includes(q);
+        const matchCore = ((item.core_function || DEFAULT_CORE_FUNCTION) as string).toLowerCase().includes(q);
+        const matchDev = (item.dev_assigned || '').toLowerCase().includes(q);
+        const matchReqBy = (item.requested_by || (item as any).raise_by || '').toLowerCase().includes(q);
+
+        if (!matchId && !matchTitle && !matchDetails && !matchRemark && !matchModule && !matchCore && !matchDev && !matchReqBy) {
           return false;
         }
       }
       if (filter.status && item.status !== filter.status) return false;
       if (filter.priority && item.priority !== filter.priority) return false;
-      if (filter.raise_by && item.raise_by !== filter.raise_by) return false;
+      if (filter.dev_assigned && item.dev_assigned !== filter.dev_assigned) return false;
+      if (filter.requested_by && (item.requested_by || (item as any).raise_by) !== filter.requested_by) return false;
       return true;
     });
-    return sortIssues(filtered);
-  }, [issues, filter, sortIssues]);
+    return sortRequirements(filtered);
+  }, [requirements, filter, sortRequirements]);
 
   const hasActiveFilters = Boolean(
-    filter.search || filter.status || filter.priority || filter.raise_by
+    filter.search || filter.status || filter.priority || filter.dev_assigned || filter.requested_by
   );
 
   const clearFilters = () => {
@@ -457,76 +459,68 @@ export default function IssueExplorerView({
       status: '',
       priority: '',
       module: '',
-      raise_by: '',
+      requested_by: '',
+      dev_assigned: '',
     });
   };
 
-  // Build hierarchical stats across all 5 Core Functions -> Sub-modules
+  // Build hierarchical summaries across all 5 Core Functions
   const coreSummaries = useMemo(() => {
     return CORE_FUNCTIONS.map((core) => {
-      const coreAllIssues = issues.filter(
-        (i) => (i.core_function || DEFAULT_CORE_FUNCTION) === core
+      const coreAll = requirements.filter(
+        (r) => (r.core_function || DEFAULT_CORE_FUNCTION) === core
       );
-      const coreFilteredIssues = matchingIssues.filter(
-        (i) => (i.core_function || DEFAULT_CORE_FUNCTION) === core
+      const coreFiltered = matchingRequirements.filter(
+        (r) => (r.core_function || DEFAULT_CORE_FUNCTION) === core
       );
 
-      // Sub-module names from defaults + DB + issues
       const modSet = new Set<string>(DEFAULT_MODULES_BY_CORE[core] || []);
       modules
         .filter((m) => (m.core_function || DEFAULT_CORE_FUNCTION) === core)
         .forEach((m) => {
           if (m.name) modSet.add(m.name);
         });
-      coreAllIssues.forEach((i) => {
-        if (i.module) modSet.add(i.module);
+      coreAll.forEach((r) => {
+        if (r.module) modSet.add(r.module);
       });
 
       const subModules = Array.from(modSet)
         .map((modName) => {
-          const modAll = coreAllIssues.filter((i) => (i.module || 'Other') === modName);
-          const modFiltered = coreFilteredIssues.filter((i) => (i.module || 'Other') === modName);
+          const modAll = coreAll.filter((r) => (r.module || 'General') === modName);
+          const modFiltered = coreFiltered.filter((r) => (r.module || 'General') === modName);
           const total = modAll.length;
-          const closed = modAll.filter((i) => i.status === 'Closed').length;
-          const open = total - closed;
-          const highOpen = modAll.filter(
-            (i) => i.priority.includes('High') && i.status !== 'Closed'
-          ).length;
+          const done = modAll.filter((r) => r.status === 'Done' || (r.status as string) === 'Closed').length;
+          const pending = total - done;
           return {
             name: modName,
             total,
-            closed,
-            open,
-            highOpen,
-            percentClosed: total > 0 ? Math.round((closed / total) * 100) : 0,
-            filteredIssues: modFiltered,
+            done,
+            pending,
+            percentDone: total > 0 ? Math.round((done / total) * 100) : 0,
+            filteredRequirements: modFiltered,
           };
         })
         .sort((a, b) => {
           if (b.total !== a.total) return b.total - a.total;
-          return a.name.localeCompare(b.name);
+          return a.name.localeCompare(b.name, 'th');
         });
 
-      const total = coreAllIssues.length;
-      const closed = coreAllIssues.filter((i) => i.status === 'Closed').length;
-      const open = total - closed;
-      const highOpen = coreAllIssues.filter(
-        (i) => i.priority.includes('High') && i.status !== 'Closed'
-      ).length;
+      const total = coreAll.length;
+      const done = coreAll.filter((r) => r.status === 'Done' || (r.status as string) === 'Closed').length;
+      const pending = total - done;
 
       return {
         core,
         meta: CORE_FUNCTION_META[core],
         total,
-        closed,
-        open,
-        highOpen,
-        percentClosed: total > 0 ? Math.round((closed / total) * 100) : 0,
-        filteredIssues: coreFilteredIssues,
+        done,
+        pending,
+        percentDone: total > 0 ? Math.round((done / total) * 100) : 0,
+        filteredRequirements: coreFiltered,
         subModules,
       };
     });
-  }, [issues, matchingIssues, modules]);
+  }, [requirements, matchingRequirements, modules]);
 
   const activeCoreSummary = useMemo(() => {
     if (!selectedCore) return null;
@@ -539,54 +533,31 @@ export default function IssueExplorerView({
       activeCoreSummary.subModules.find((m) => m.name === selectedModule) || {
         name: selectedModule,
         total: 0,
-        closed: 0,
-        open: 0,
-        highOpen: 0,
-        percentClosed: 0,
-        filteredIssues: activeCoreSummary.filteredIssues.filter(
-          (i) => i.module === selectedModule
+        done: 0,
+        pending: 0,
+        percentDone: 0,
+        filteredRequirements: activeCoreSummary.filteredRequirements.filter(
+          (r) => r.module === selectedModule
         ),
       }
     );
   }, [activeCoreSummary, selectedModule]);
 
-  const handleSaveNewSubModule = async () => {
-    const trimmed = newSubModuleName.trim();
-    if (!trimmed || !selectedCore || !onAddModule) return;
-    setSavingSubModule(true);
-    try {
-      await onAddModule(trimmed, selectedCore);
-      setNewSubModuleName('');
-      setAddingSubModule(false);
-    } finally {
-      setSavingSubModule(false);
-    }
-  };
-
   return (
-    <div className="space-y-5">
-      {/* Top Search & Global Filter Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-[#DCEBFF] shadow-sm space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+    <div className="space-y-4">
+      {/* Search and Filters Bar */}
+      <div className="bg-white rounded-2xl border border-[#DCEBFF] shadow-xs p-4 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
           {/* Search Input */}
-          <div className="md:col-span-5 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <div className="md:col-span-4 relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
-              placeholder="ค้นหา ISSUE_ID, รายละเอียดปัญหา, กลุ่มหลัก, กลุ่มย่อย..."
+              placeholder="ค้นหา Req ID, หัวข้อ, รายละเอียด, Dev, ผู้ขอ..."
               value={filter.search}
               onChange={(e) => onFilterChange((prev) => ({ ...prev, search: e.target.value }))}
-              className="w-full pl-10 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-[#0086FF] outline-none focus:bg-white transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#0086FF] outline-none transition-all"
             />
-            {filter.search && (
-              <button
-                type="button"
-                onClick={() => onFilterChange((prev) => ({ ...prev, search: '' }))}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
           </div>
 
           {/* Filter: Status */}
@@ -594,14 +565,14 @@ export default function IssueExplorerView({
             <select
               value={filter.status}
               onChange={(e) => onFilterChange((prev) => ({ ...prev, status: e.target.value }))}
-              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:ring-2 focus:ring-[#0086FF] outline-none"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-[#0086FF] outline-none"
             >
-              <option value="">ทุก Status</option>
-              <option value="Open">Open</option>
-              <option value="Need Info">Need Info (รอข้อมูลเพิ่ม)</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Test">Test</option>
-              <option value="Closed">Closed</option>
+              <option value="">ทุกสถานะ (Status)</option>
+              <option value="Draft">Draft (ร่างข้อกำหนด)</option>
+              <option value="In Review">In Review (รอตรวจทาน)</option>
+              <option value="In Development">In Development (Dev กำลังทำ)</option>
+              <option value="Testing">Testing (กำลังทดสอบ/UAT)</option>
+              <option value="Done">Done (เสร็จสมบูรณ์)</option>
             </select>
           </div>
 
@@ -610,7 +581,7 @@ export default function IssueExplorerView({
             <select
               value={filter.priority}
               onChange={(e) => onFilterChange((prev) => ({ ...prev, priority: e.target.value }))}
-              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:ring-2 focus:ring-[#0086FF] outline-none"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-[#0086FF] outline-none"
             >
               <option value="">ทุก Priority</option>
               <option value="1.High">1.High</option>
@@ -619,14 +590,14 @@ export default function IssueExplorerView({
             </select>
           </div>
 
-          {/* Filter: Raise By */}
+          {/* Filter: Dev Assigned */}
           <div className="md:col-span-2">
             <select
-              value={filter.raise_by}
-              onChange={(e) => onFilterChange((prev) => ({ ...prev, raise_by: e.target.value }))}
-              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:ring-2 focus:ring-[#0086FF] outline-none"
+              value={filter.dev_assigned || ''}
+              onChange={(e) => onFilterChange((prev) => ({ ...prev, dev_assigned: e.target.value }))}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-[#0086FF] outline-none"
             >
-              <option value="">ผู้แจ้งทั้งหมด</option>
+              <option value="">Dev ผู้รับผิดชอบทั้งหมด</option>
               {teamMembers.map((tm) => (
                 <option key={tm.id} value={tm.name}>
                   {tm.name}
@@ -635,56 +606,27 @@ export default function IssueExplorerView({
             </select>
           </div>
 
-          {/* Clear Filter */}
-          <div className="md:col-span-1 flex justify-end">
-            {hasActiveFilters ? (
+          {/* Clear Filter / Count */}
+          <div className="md:col-span-2 flex items-center justify-end gap-2">
+            {hasActiveFilters && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="w-full flex items-center justify-center gap-1 px-3 py-2.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
                 title="ล้างตัวกรอง"
               >
                 <Filter className="w-3.5 h-3.5" />
-                ล้าง
+                ล้างตัวกรอง
               </button>
-            ) : (
-              <span className="text-[11px] font-semibold text-slate-400 px-2 py-2 text-center w-full">
-                {issues.length} เรื่อง
-              </span>
             )}
+            <span className="text-xs font-bold text-[#044492] px-2.5 py-1 bg-blue-50 rounded-lg border border-blue-200">
+              {matchingRequirements.length} รายการ
+            </span>
           </div>
         </div>
 
-        {/* Quick Need Info Alert Strip (if any cases wait for opener response) */}
-        {issues.some((i) => i.status === 'Need Info') && (
-          <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-orange-50/90 border border-orange-300 text-xs">
-            <div className="flex items-center gap-2 text-orange-950 font-bold">
-              <HelpCircle className="w-4 h-4 text-orange-600 shrink-0" />
-              <span>
-                มีเคสที่ Dev ขอข้อมูลเพิ่มเติม ({issues.filter((i) => i.status === 'Need Info').length} รายการ) — รอผู้เปิด Case เข้าไป Action ตอบกลับ
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                onFilterChange((prev) => ({
-                  ...prev,
-                  status: prev.status === 'Need Info' ? '' : 'Need Info',
-                }))
-              }
-              className={`px-3 py-1 rounded-lg font-extrabold transition-colors border ${
-                filter.status === 'Need Info'
-                  ? 'bg-orange-600 text-white border-orange-600'
-                  : 'bg-white hover:bg-orange-100 text-orange-800 border-orange-300'
-              }`}
-            >
-              {filter.status === 'Need Info' ? '✓ กำลังกรอง Need Info (คลิกเพื่อดูทั้งหมด)' : 'กรองเฉพาะ Need Info'}
-            </button>
-          </div>
-        )}
-
-        {/* Breadcrumb & 5 Core Quick Switcher */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+        {/* Quick Core Function Switcher Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-100">
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <button
               type="button"
@@ -692,14 +634,14 @@ export default function IssueExplorerView({
                 onSelectCore(null);
                 onSelectModule(null);
               }}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all ${
                 !selectedCore
-                  ? 'bg-indigo-600 text-white shadow-xs'
+                  ? 'bg-[#044492] text-white shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
               <FolderTree className="w-3.5 h-3.5" />
-              กลุ่มหลักทั้งหมด (5 Core)
+              ทุก Core Functions
             </button>
 
             {selectedCore && (
@@ -708,10 +650,10 @@ export default function IssueExplorerView({
                 <button
                   type="button"
                   onClick={() => onSelectModule(null)}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-colors ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all ${
                     !selectedModule
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
+                      ? 'bg-[#0086FF] text-white shadow-xs'
+                      : 'bg-blue-50 hover:bg-blue-100 text-[#044492]'
                   }`}
                 >
                   <FolderOpen className="w-3.5 h-3.5" />
@@ -723,7 +665,7 @@ export default function IssueExplorerView({
             {selectedCore && selectedModule && (
               <>
                 <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold bg-indigo-600 text-white shadow-xs">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold bg-[#044492] text-white shadow-xs">
                   <Layers className="w-3.5 h-3.5" />
                   {selectedModule}
                 </span>
@@ -731,7 +673,7 @@ export default function IssueExplorerView({
             )}
           </div>
 
-          {/* Quick jump pills for 5 Core Functions */}
+          {/* Quick jump pills */}
           <div className="flex flex-wrap items-center gap-1.5">
             {coreSummaries.map((c) => {
               const active = selectedCore === c.core;
@@ -745,14 +687,11 @@ export default function IssueExplorerView({
                   }}
                   className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
                     active
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                      ? 'bg-[#044492] text-white border-[#044492] shadow-xs'
                       : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200'
                   }`}
                 >
-                  {c.meta.order}. {c.meta.shortName}{' '}
-                  <span className={active ? 'text-indigo-300' : 'text-slate-400'}>
-                    ({hasActiveFilters ? c.filteredIssues.length : c.total})
-                  </span>
+                  {c.meta.shortName} ({c.total})
                 </button>
               );
             })}
@@ -760,793 +699,118 @@ export default function IssueExplorerView({
         </div>
       </div>
 
-      {/* ===================================================================== */}
-      {/* LEVEL 3: DRILLED INTO A SPECIFIC SUB-MODULE                            */}
-      {/* ===================================================================== */}
-      {selectedCore && selectedModule && activeCoreSummary && activeModuleSummary && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <button
-                type="button"
-                onClick={() => onSelectModule(null)}
-                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors mt-0.5"
-                title={`กลับไปยังกลุ่มย่อยของ ${selectedCore}`}
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border ${activeCoreSummary.meta.badgeBg} ${activeCoreSummary.meta.badgeText} ${activeCoreSummary.meta.badgeBorder}`}>
-                    #{activeCoreSummary.meta.order} {selectedCore}
-                  </span>
-                  <span className="text-xs text-slate-400">/</span>
-                  <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-indigo-600" />
-                    {selectedModule}
-                  </h2>
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  ทั้งหมด {activeModuleSummary.total} รายการ • ปิดแล้ว {activeModuleSummary.closed} • คงค้าง {activeModuleSummary.open}
-                  {hasActiveFilters && ` (ตรงตามตัวกรอง ${activeModuleSummary.filteredIssues.length} รายการ)`}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {onUpdateModule && (
-                <button
-                  type="button"
-                  onClick={() => handleOpenRename(selectedModule, selectedCore)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
-                  title={`แก้ไขชื่อกลุ่มย่อย "${selectedModule}"`}
-                >
-                  <Edit className="w-3.5 h-3.5 text-indigo-600" />
-                  แก้ไขชื่อ
-                </button>
-              )}
-              {onDeleteModule && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleAttemptDeleteModule(selectedModule, selectedCore, activeModuleSummary.total)
-                  }
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors border ${
-                    activeModuleSummary.total > 0
-                      ? 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 cursor-not-allowed'
-                      : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
-                  }`}
-                  title={
-                    activeModuleSummary.total > 0
-                      ? `มี ${activeModuleSummary.total} Issue ในกลุ่มย่อยนี้ (ห้ามลบ)`
-                      : `ลบกลุ่มย่อย "${selectedModule}"`
-                  }
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  ลบกลุ่มย่อย
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() =>
-                  onExportExcel(
-                    activeModuleSummary.filteredIssues,
-                    `${selectedCore} - ${selectedModule}`
-                  )
-                }
-                disabled={activeModuleSummary.filteredIssues.length === 0}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export Excel ({activeModuleSummary.filteredIssues.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => onCreateIssue(selectedCore, selectedModule)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                แจ้งปัญหาใน {selectedModule}
-              </button>
-            </div>
+      {/* Main Content Area */}
+      <div className="bg-white rounded-2xl border border-[#DCEBFF] shadow-xs overflow-hidden">
+        {/* Table Header Bar */}
+        <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-800">
+              {selectedModule
+                ? `โมดูล: ${selectedModule}`
+                : selectedCore
+                ? `Core Function: ${selectedCore}`
+                : 'ตาราง Requirement ทั้งหมด'}
+            </span>
+            <span className="text-xs font-semibold text-slate-500">
+              (แสดง {matchingRequirements.length} จาก {requirements.length} เรื่อง)
+            </span>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            {activeModuleSummary.filteredIssues.length === 0 ? (
-              <div className="text-center py-14 px-4 space-y-3">
-                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
-                <p className="text-sm font-bold text-slate-700">
-                  {hasActiveFilters
-                    ? `ไม่พบรายการในกลุ่มย่อย "${selectedModule}" ที่ตรงกับตัวกรอง`
-                    : `ยังไม่มีรายการปัญหาใน "${selectedModule}"`}
-                </p>
-                <div className="flex justify-center gap-2">
-                  {hasActiveFilters && (
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="text-xs font-semibold text-indigo-600 hover:underline px-3 py-1.5"
-                    >
-                      ล้างตัวกรอง
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onCreateIssue(selectedCore, selectedModule)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    เพิ่มปัญหาแรกใน {selectedModule}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <IssueRowsTable
-                items={activeModuleSummary.filteredIssues}
-                sortField={sortField}
-                sortAsc={sortAsc}
-                onSort={handleSort}
-                onSelectIssue={onSelectIssue}
-                onEditIssue={onEditIssue}
-                onDeleteIssue={onDeleteIssue}
-              />
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ===================================================================== */}
-      {/* LEVEL 2: DRILLED INTO A CORE FUNCTION (SHOW SUB-MODULE FOLDERS + LIST) */}
-      {/* ===================================================================== */}
-      {selectedCore && !selectedModule && activeCoreSummary && (
-        <div className="space-y-5">
-          {/* Core Function Banner Card */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <button
-                  type="button"
-                  onClick={() => onSelectCore(null)}
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors mt-0.5"
-                  title="กลับไปหน้า 5 Core Functions"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-lg border ${activeCoreSummary.meta.badgeBg} ${activeCoreSummary.meta.badgeText} ${activeCoreSummary.meta.badgeBorder}`}>
-                      Core #{activeCoreSummary.meta.order}
-                    </span>
-                    <h2 className="text-xl font-extrabold text-slate-900">
-                      {activeCoreSummary.core}
-                    </h2>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {activeCoreSummary.meta.description} • {activeCoreSummary.subModules.length} กลุ่มย่อย • ทั้งหมด {activeCoreSummary.total} ปัญหา (ปิดแล้ว {activeCoreSummary.closed} / ค้าง {activeCoreSummary.open})
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {onAddModule && (
-                  <button
-                    type="button"
-                    onClick={() => setAddingSubModule((v) => !v)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
-                  >
-                    <FolderPlus className="w-3.5 h-3.5 text-indigo-600" />
-                    เพิ่มกลุ่มย่อย
-                  </button>
-                )}
-                {(onUpdateModule || onDeleteModule) && (
-                  <button
-                    type="button"
-                    onClick={() => setManagingModules(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
-                    title={`จัดการ แก้ไข หรือลบกลุ่มย่อยใน ${activeCoreSummary.meta.shortName}`}
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-600" />
-                    จัดการกลุ่มย่อย ({activeCoreSummary.subModules.length})
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() =>
-                    onExportExcel(activeCoreSummary.filteredIssues, selectedCore)
-                  }
-                  disabled={activeCoreSummary.filteredIssues.length === 0}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-colors"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export กลุ่มนี้ ({activeCoreSummary.filteredIssues.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onCreateIssue(selectedCore)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  แจ้งปัญหาใน {activeCoreSummary.meta.shortName}
-                </button>
-              </div>
-            </div>
-
-            {addingSubModule && (
-              <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-indigo-50/70 border border-indigo-200">
-                <input
-                  type="text"
-                  placeholder={`ชื่อกลุ่มย่อย (Module) ใหม่ใน ${selectedCore}...`}
-                  value={newSubModuleName}
-                  onChange={(e) => setNewSubModuleName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSaveNewSubModule();
-                    }
-                  }}
-                  className="flex-1 min-w-[220px] px-3 py-2 bg-white border border-indigo-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <button
-                  type="button"
-                  disabled={!newSubModuleName.trim() || savingSubModule}
-                  onClick={handleSaveNewSubModule}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold"
-                >
-                  {savingSubModule ? 'กำลังบันทึก...' : 'บันทึกกลุ่มย่อย'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAddingSubModule(false);
-                    setNewSubModuleName('');
-                  }}
-                  className="px-3 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-xs font-semibold"
-                >
-                  ยกเลิก
-                </button>
-              </div>
-            )}
-
-            {/* Sub-module Folder Grid */}
-            <div>
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <Folder className="w-3.5 h-3.5 text-indigo-500" />
-                เลือกกลุ่มย่อย (Modules) ใน {selectedCore}
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {activeCoreSummary.subModules.map((mod) => {
-                  const displayCount = hasActiveFilters ? mod.filteredIssues.length : mod.total;
-                  return (
-                    <div
-                      key={mod.name}
-                      onClick={() => onSelectModule(mod.name)}
-                      className={`group p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
-                        displayCount > 0
-                          ? 'bg-slate-50/70 hover:bg-indigo-50/60 border-slate-200 hover:border-indigo-300 shadow-2xs hover:shadow'
-                          : 'bg-white hover:bg-slate-50 border-slate-200/70 opacity-80 hover:opacity-100'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Folder className={`w-4 h-4 shrink-0 ${displayCount > 0 ? 'text-indigo-600 fill-indigo-100' : 'text-slate-400'}`} />
-                          <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-indigo-700 truncate">
-                            {mod.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-700">
-                            {displayCount}
-                          </span>
-                          {onUpdateModule && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenRename(mod.name, selectedCore);
-                              }}
-                              className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-white transition-colors"
-                              title={`แก้ไขชื่อกลุ่มย่อย "${mod.name}"`}
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {onDeleteModule && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAttemptDeleteModule(mod.name, selectedCore, mod.total);
-                              }}
-                              className={`p-1 rounded transition-colors ${
-                                mod.total > 0
-                                  ? 'text-slate-300 hover:text-amber-600 hover:bg-amber-50 cursor-not-allowed'
-                                  : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
-                              }`}
-                              title={
-                                mod.total > 0
-                                  ? `มี ${mod.total} Issue ในกลุ่มนี้ (ห้ามลบ)`
-                                  : `ลบกลุ่มย่อย "${mod.name}"`
-                              }
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-500">
-                            <b className="text-emerald-600">{mod.closed}</b> ปิด / <b className="text-amber-600">{mod.open}</b> ค้าง
-                          </span>
-                          {mod.highOpen > 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded">
-                              <Flame className="w-2.5 h-2.5" /> {mod.highOpen} High
-                            </span>
-                          )}
-                        </div>
-                        <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden flex">
-                          {mod.total > 0 ? (
-                            <>
-                              {mod.closed > 0 && (
-                                <div className="bg-emerald-500 h-full" style={{ width: `${mod.percentClosed}%` }} />
-                              )}
-                              {mod.open > 0 && (
-                                <div className="bg-amber-400 h-full" style={{ width: `${100 - mod.percentClosed}%` }} />
-                              )}
-                            </>
-                          ) : (
-                            <div className="w-full h-full bg-slate-200" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Grouped Accordion Issues within selected Core Function */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-1">
-              <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-600" />
-                รายการปัญหาใน {selectedCore} แยกตามกลุ่มย่อย ({activeCoreSummary.filteredIssues.length} รายการ)
-              </h3>
-            </div>
-
-            {activeCoreSummary.subModules.filter((m) => m.filteredIssues.length > 0).length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
-                <FolderOpen className="w-10 h-10 text-slate-300 mx-auto" />
-                <p className="text-sm font-bold text-slate-700">
-                  {hasActiveFilters
-                    ? `ไม่พบรายการปัญหาใน ${selectedCore} ที่ตรงกับเงื่อนไขการกรอง`
-                    : `ยังไม่มีรายการปัญหาใน ${selectedCore}`}
-                </p>
-                <div className="flex justify-center gap-2">
-                  {hasActiveFilters && (
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="text-xs font-semibold text-indigo-600 hover:underline px-3 py-1.5"
-                    >
-                      ล้างตัวกรอง
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onCreateIssue(selectedCore)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    เพิ่มปัญหาใน {activeCoreSummary.meta.shortName}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              activeCoreSummary.subModules
-                .filter((m) => m.filteredIssues.length > 0)
-                .map((mod) => {
-                  const key = `${selectedCore}::${mod.name}`;
-                  const isCollapsed = Boolean(collapsedSubModules[key]);
-                  return (
-                    <div
-                      key={mod.name}
-                      className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
-                    >
-                      <div className="px-4 py-3 bg-slate-50/90 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCollapsedSubModules((prev) => ({
-                              ...prev,
-                              [key]: !prev[key],
-                            }))
-                          }
-                          className="flex items-center gap-2 text-left group"
-                        >
-                          {isCollapsed ? (
-                            <ChevronDown className="w-4 h-4 text-slate-500" />
-                          ) : (
-                            <ChevronUp className="w-4 h-4 text-slate-500" />
-                          )}
-                          <FolderOpen className="w-4 h-4 text-indigo-600" />
-                          <span className="text-sm font-extrabold text-slate-900 group-hover:text-indigo-700">
-                            {mod.name}
-                          </span>
-                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                            {mod.filteredIssues.length} รายการ
-                          </span>
-                          <span className="text-[11px] text-slate-500 hidden sm:inline">
-                            ({mod.closed} ปิด / {mod.open} ค้าง)
-                          </span>
-                        </button>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onSelectModule(mod.name)}
-                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2.5 py-1 rounded-lg transition-colors"
-                          >
-                            เปิดเฉพาะกลุ่มนี้ →
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onCreateIssue(selectedCore, mod.name)}
-                            className="inline-flex items-center gap-1 text-xs font-bold text-orange-600 hover:bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200 transition-colors"
-                          >
-                            <Plus className="w-3 h-3" /> เพิ่ม
-                          </button>
-                        </div>
-                      </div>
-
-                      {!isCollapsed && (
-                        <IssueRowsTable
-                          items={mod.filteredIssues}
-                          sortField={sortField}
-                          sortAsc={sortAsc}
-                          onSort={handleSort}
-                          onSelectIssue={onSelectIssue}
-                          onEditIssue={onEditIssue}
-                          onDeleteIssue={onDeleteIssue}
-                        />
-                      )}
-                    </div>
-                  );
-                })
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ===================================================================== */}
-      {/* LEVEL 1: TOP-LEVEL VIEW (5 CORE FUNCTION FOLDERS OR FILTERED GROUPS)  */}
-      {/* ===================================================================== */}
-      {!selectedCore && !hasActiveFilters && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-            <div>
-              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                <FolderTree className="w-5 h-5 text-indigo-600" />
-                ดูข้อมูลปัญหาตามกลุ่มหลัก (5 Core Functions)
-              </h2>
-              <p className="text-xs text-slate-500">
-                เลือกกลุ่มหลักเพื่อเข้าไปดูกลุ่มย่อย (Modules) หรือคลิกที่ชิปกลุ่มย่อยเพื่อเปิดรายการปัญหานั้นทันที
-              </p>
-            </div>
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => onExportExcel(issues, 'All Core Functions')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-colors"
+              onClick={() => onExportExcel(matchingRequirements, selectedModule || selectedCore || 'All Requirements')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs"
             >
               <Download className="w-3.5 h-3.5" />
-              Export สรุปทั้งหมดพร้อมรูป ({issues.length} เรื่อง)
+              Export Excel
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onCreateIssue(selectedCore || DEFAULT_CORE_FUNCTION, selectedModule || undefined)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFCB06] hover:bg-[#E5B600] text-slate-950 text-xs font-black transition-all shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              เพิ่ม Requirement
             </button>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {coreSummaries.map((c) => {
-              const nonEmptyMods = c.subModules.filter((m) => m.total > 0);
-              const previewMods =
-                nonEmptyMods.length > 0 ? nonEmptyMods : c.subModules.slice(0, 6);
-
-              return (
-                <div
-                  key={c.core}
-                  className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between gap-4"
-                >
-                  <div className="space-y-3">
-                    {/* Card Header */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div
-                        onClick={() => onSelectCore(c.core)}
-                        className="cursor-pointer group flex-1 min-w-0"
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-md border ${c.meta.badgeBg} ${c.meta.badgeText} ${c.meta.badgeBorder}`}>
-                            Core #{c.meta.order}
-                          </span>
-                          {c.highOpen > 0 && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-red-100 text-red-700 border border-red-200">
-                              <Flame className="w-3 h-3" /> {c.highOpen} High เปิดอยู่
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-indigo-700 transition-colors flex items-center gap-2">
-                          <FolderOpen className="w-5 h-5 text-indigo-600 shrink-0" />
-                          {c.core}
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">{c.meta.description}</p>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div className="text-2xl font-black text-slate-900 leading-none">
-                          {c.total}
-                        </div>
-                        <div className="text-[11px] font-semibold text-slate-400 mt-1">
-                          รายการปัญหา
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Progress bar */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-600 font-medium">
-                          ปิดแล้ว <b className="text-emerald-600">{c.closed}</b> • คงค้าง <b className="text-amber-600">{c.open}</b>
-                        </span>
-                        <span className="font-bold text-slate-700">
-                          {c.total > 0 ? `${c.percentClosed}% สำเร็จ` : 'ยังไม่มีรายการ'}
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex border border-slate-200/70">
-                        {c.total > 0 ? (
-                          <>
-                            {c.closed > 0 && (
-                              <div
-                                className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full"
-                                style={{ width: `${c.percentClosed}%` }}
-                              />
-                            )}
-                            {c.open > 0 && (
-                              <div
-                                className="bg-gradient-to-r from-amber-400 to-orange-400 h-full"
-                                style={{ width: `${100 - c.percentClosed}%` }}
-                              />
-                            )}
-                          </>
-                        ) : (
-                          <div className="w-full h-full bg-slate-200/60" />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Sub-module Quick Pills */}
-                    <div className="pt-1">
-                      <p className="text-[11px] font-bold text-slate-400 mb-1.5">
-                        กลุ่มย่อย ({c.subModules.length} โมดูล):
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {previewMods.map((m) => (
-                          <button
-                            key={m.name}
-                            type="button"
-                            onClick={() => {
-                              onSelectCore(c.core);
-                              onSelectModule(m.name);
-                            }}
-                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 ${
-                              m.total > 0
-                                ? 'bg-indigo-50/70 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
-                                : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            <span>{m.name}</span>
-                            <span className={m.total > 0 ? 'text-indigo-600 font-extrabold' : 'text-slate-400'}>
-                              ({m.total})
-                            </span>
-                          </button>
-                        ))}
-                        {c.subModules.length > previewMods.length && (
-                          <button
-                            type="button"
-                            onClick={() => onSelectCore(c.core)}
-                            className="text-[11px] font-semibold px-2 py-1 text-slate-500 hover:text-indigo-700"
-                          >
-                            +{c.subModules.length - previewMods.length} อื่นๆ...
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Footer Actions */}
-                  <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onCreateIssue(c.core)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 text-xs font-bold transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        แจ้งปัญหา
-                      </button>
-                      {c.total > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => onExportExcel(c.filteredIssues, c.core)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-colors"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          Export
-                        </button>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => onSelectCore(c.core)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs font-bold transition-colors"
-                    >
-                      เปิดดูกลุ่มย่อย ({c.subModules.length})
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
-      )}
 
-      {/* ===================================================================== */}
-      {/* FILTERED GROUPED VIEW (WHEN SEARCH OR GLOBAL FILTER IS ACTIVE)        */}
-      {/* ===================================================================== */}
-      {!selectedCore && hasActiveFilters && (
-        <div className="space-y-4">
-          <div className="bg-indigo-50/90 border border-indigo-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-extrabold text-indigo-950 flex items-center gap-2">
-                <Filter className="w-4 h-4 text-indigo-600" />
-                แสดงผลตามตัวกรองแบบจัดกลุ่มอัตโนมัติ (Core Function → กลุ่มย่อย)
-              </h3>
-              <p className="text-xs text-indigo-700 mt-0.5">
-                พบทั้งหมด <span className="font-extrabold">{matchingIssues.length}</span> รายการจากทุกกลุ่มหลัก
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {matchingIssues.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => onExportExcel(matchingIssues, 'Filtered Issues')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 rounded-xl text-xs font-bold"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export ผลลัพธ์ ({matchingIssues.length})
-                </button>
-              )}
+        {/* Requirements Table */}
+        {matchingRequirements.length > 0 ? (
+          <RequirementTable
+            items={
+              selectedModule
+                ? activeModuleSummary?.filteredRequirements || []
+                : selectedCore
+                ? activeCoreSummary?.filteredRequirements || []
+                : matchingRequirements
+            }
+            sortField={sortField}
+            sortAsc={sortAsc}
+            onSort={handleSort}
+            onSelectIssue={onSelectIssue}
+            onEditIssue={onEditIssue}
+            onDeleteIssue={onDeleteIssue}
+            showCoreColumn={!selectedCore}
+          />
+        ) : (
+          <div className="p-12 text-center">
+            <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h4 className="text-sm font-bold text-slate-700">ไม่พบรายการ Requirement ที่ค้นหา</h4>
+            <p className="text-xs text-slate-500 mt-1">
+              ลองเปลี่ยนคำค้นหา หรือกด &quot;ล้างตัวกรอง&quot; เพื่อดูรายการทั้งหมด
+            </p>
+            {hasActiveFilters && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold"
+                className="mt-3 px-4 py-1.5 rounded-lg bg-[#0086FF] text-white text-xs font-semibold"
               >
-                กลับมุมมอง 5 กลุ่มหลัก
+                ล้างตัวกรอง
               </button>
-            </div>
+            )}
           </div>
+        )}
+      </div>
 
-          {matchingIssues.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-14 text-center space-y-2">
-              <Search className="w-10 h-10 text-slate-300 mx-auto" />
-              <p className="text-sm font-bold text-slate-700">ไม่พบรายการปัญหาที่ตรงกับตัวกรอง</p>
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="text-xs font-semibold text-indigo-600 hover:underline"
-              >
-                ล้างตัวกรองทั้งหมด
-              </button>
-            </div>
-          ) : (
-            coreSummaries
-              .filter((c) => c.filteredIssues.length > 0)
-              .map((c) => (
-                <div key={c.core} className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-900 text-white rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => onSelectCore(c.core)}
-                      className="flex items-center gap-2 font-extrabold text-sm hover:text-indigo-300 transition-colors"
-                    >
-                      <FolderOpen className="w-4 h-4 text-indigo-400" />
-                      #{c.meta.order} {c.core}
-                      <span className="text-xs font-bold bg-white/15 px-2.5 py-0.5 rounded-full">
-                        {c.filteredIssues.length} รายการ
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onSelectCore(c.core)}
-                      className="text-xs text-indigo-300 hover:text-white font-semibold"
-                    >
-                      เปิดกลุ่มนี้ →
-                    </button>
-                  </div>
-
-                  {c.subModules
-                    .filter((m) => m.filteredIssues.length > 0)
-                    .map((mod) => (
-                      <div
-                        key={`${c.core}-${mod.name}`}
-                        className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden ml-0 sm:ml-3"
-                      >
-                        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onSelectCore(c.core);
-                              onSelectModule(mod.name);
-                            }}
-                            className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-800 hover:text-indigo-700"
-                          >
-                            <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                            {mod.name}
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                              {mod.filteredIssues.length}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onSelectCore(c.core);
-                              onSelectModule(mod.name);
-                            }}
-                            className="text-[11px] font-semibold text-indigo-600 hover:underline"
-                          >
-                            เจาะลึกกลุ่มย่อย →
-                          </button>
-                        </div>
-                        <IssueRowsTable
-                          items={mod.filteredIssues}
-                          sortField={sortField}
-                          sortAsc={sortAsc}
-                          onSort={handleSort}
-                          onSelectIssue={onSelectIssue}
-                          onEditIssue={onEditIssue}
-                          onDeleteIssue={onDeleteIssue}
-                        />
-                      </div>
-                    ))}
-                </div>
-              ))
-          )}
-        </div>
-      )}
-
-      {/* Sub-module Management Modals (Rename, Delete Blocked, Confirm Delete, Manage List) */}
+      {/* Sub-module Manager Modals (if user modifies modules) */}
       <SubModuleModals
         renameTarget={renameTarget}
         renameValue={renameValue}
         savingRename={savingRename}
         onRenameValueChange={setRenameValue}
-        onCloseRename={() => setRenameTarget(null)}
         onSaveRename={handleSaveRename}
+        onCloseRename={() => {
+          setRenameTarget(null);
+          setRenameValue('');
+        }}
         deleteBlockedNotice={deleteBlockedNotice}
         onCloseDeleteBlockedNotice={() => setDeleteBlockedNotice(null)}
         confirmDeleteTarget={confirmDeleteTarget}
         deletingModule={deletingModule}
-        onCloseConfirmDelete={() => setConfirmDeleteTarget(null)}
         onConfirmDelete={handleConfirmDelete}
+        onCloseConfirmDelete={() => setConfirmDeleteTarget(null)}
         managingModules={managingModules}
-        activeCoreSummary={activeCoreSummary}
+        activeCoreSummary={
+          activeCoreSummary
+            ? {
+                core: activeCoreSummary.core,
+                subModules: activeCoreSummary.subModules.map((sm) => ({
+                  name: sm.name,
+                  total: sm.total,
+                  closed: sm.done,
+                  open: sm.pending,
+                  highOpen: 0,
+                })),
+              }
+            : null
+        }
         manageSearch={manageSearch}
         onManageSearchChange={setManageSearch}
         onCloseManagingModules={() => setManagingModules(false)}
-        onOpenAddSubModule={() => {
-          setManagingModules(false);
-          setAddingSubModule(true);
-        }}
+        onOpenAddSubModule={() => setAddingSubModule(true)}
         onOpenRename={handleOpenRename}
         onAttemptDeleteModule={handleAttemptDeleteModule}
         selectedCore={selectedCore}

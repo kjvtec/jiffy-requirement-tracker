@@ -1,13 +1,27 @@
 export type PriorityType = '1.High' | '2.Medium' | '3.Low';
-export type StatusType = 'Open' | 'Need Info' | 'In Progress' | 'Test' | 'Closed';
+export type RequirementStatusType = 'Draft' | 'In Review' | 'In Development' | 'Testing' | 'Done';
+export type RequirementType =
+  | 'New Feature'
+  | 'Change Request (CR)'
+  | 'Enhancement'
+  | 'Integration / API'
+  | 'Report / Export';
 
-export interface TimelineEntry {
-  timestamp?: string;
-  author?: string;
-  statusLabel?: string;
-  message: string;
-  isLegacy?: boolean;
-}
+export const REQUIREMENT_STATUSES: RequirementStatusType[] = [
+  'Draft',
+  'In Review',
+  'In Development',
+  'Testing',
+  'Done',
+];
+
+export const REQUIREMENT_TYPES: RequirementType[] = [
+  'New Feature',
+  'Change Request (CR)',
+  'Enhancement',
+  'Integration / API',
+  'Report / Export',
+];
 
 export const CORE_FUNCTIONS = [
   'VTec POS',
@@ -133,10 +147,11 @@ export const DEFAULT_MODULES_BY_CORE: Record<CoreFunctionType, string[]> = {
   ],
 };
 
-export const DEFAULT_CORE_FUNCTION: CoreFunctionType = 'VTec Cloud HQ';
+export const DEFAULT_CORE_FUNCTION: CoreFunctionType = 'VTec POS';
 
-export interface IssueImage {
+export interface RequirementImage {
   id?: string;
+  requirement_id?: string;
   issue_id?: string;
   file_url: string;
   file_name: string;
@@ -144,26 +159,33 @@ export interface IssueImage {
   created_at?: string;
 }
 
-export interface Issue {
+export interface Requirement {
   id: string;
-  log_id: string;
+  req_id: string; // e.g. JFY-REQ-01
+  title: string;
   priority: PriorityType | string;
-  type: string;
+  type: RequirementType | string;
   core_function?: CoreFunctionType | string;
   module: string;
   details: string;
-  raise_by: string;
-  raise_date: string;
-  status: StatusType | string;
-  resolution?: string | null;
-  updated_by?: string | null;
-  closed_by?: string | null;
-  closed_date?: string | null;
-  closed_version?: string | null;
+  requested_by: string;
+  request_date: string;
+  status: RequirementStatusType | string;
+  dev_assigned?: string | null;
+  target_version?: string | null;
   remark?: string | null;
   created_at?: string;
   updated_at?: string;
-  images?: IssueImage[];
+  images?: RequirementImage[];
+
+  // Compatibility helpers
+  log_id?: string;
+  raise_by?: string;
+  raise_date?: string;
+  resolution?: string;
+  closed_by?: string | null;
+  closed_version?: string | null;
+  updated_by?: string | null;
 }
 
 export interface TeamMember {
@@ -178,11 +200,27 @@ export interface SystemModule {
   core_function?: string;
 }
 
-export interface IssueFilter {
+export interface RequirementFilter {
   search: string;
   status: string;
   priority: string;
   core_function: string;
   module: string;
-  raise_by: string;
+  requested_by: string;
+  dev_assigned: string;
+  raise_by?: string;
 }
+
+export interface TimelineEntry {
+  timestamp?: string;
+  author?: string;
+  statusLabel?: string;
+  message: string;
+  isLegacy?: boolean;
+}
+
+// Aliases for compatibility
+export type Issue = Requirement;
+export type IssueImage = RequirementImage;
+export type StatusType = RequirementStatusType;
+export type IssueFilter = RequirementFilter;
