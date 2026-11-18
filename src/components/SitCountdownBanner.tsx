@@ -262,11 +262,12 @@ export default function SitCountdownBanner({ requirements }: SitCountdownBannerP
             {/* Actual Elapsed Progress Fill */}
             <div
               style={{ width: `${Math.min(100, Math.max(2, timeline.timePct))}%` }}
-              className="absolute top-0.5 bottom-0.5 left-0.5 rounded-lg bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 shadow-md flex items-center justify-end pr-2 transition-all duration-500"
+              className="sit-gradient-flow sit-shimmer-sweep absolute top-0.5 bottom-0.5 left-0.5 rounded-lg overflow-hidden flex items-center justify-start pl-2 transition-all duration-500"
             >
-              <span className="text-[11px] font-bold text-slate-950 px-1.5 py-0.5 bg-white/90 rounded shadow-xs truncate">
+              <span className="relative z-10 text-[11px] font-bold text-slate-950 px-1.5 py-0.5 bg-white/90 rounded shadow-xs truncate">
                 Day {timeline.elapsedDays} / {timeline.totalDays} ({timeline.timePct}%)
               </span>
+              <span aria-hidden className="absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_3px_rgba(45,212,191,0.85)]" />
             </div>
           </div>
         </div>
