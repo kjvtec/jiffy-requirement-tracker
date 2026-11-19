@@ -401,55 +401,124 @@ export default function DashboardView({
         })}
       </div>
 
-      {/* High priority still open */}
+      {/* High priority still open — Compact View */}
       {highPending.length > 0 && (
         <section className="card border-red-200 overflow-hidden" aria-label="High Priority ที่ยังค้าง">
-          <div className="px-4 py-3 bg-gradient-to-r from-red-50 to-white border-b border-red-100 flex items-center justify-between gap-3">
+          <div className="px-3.5 py-2.5 bg-gradient-to-r from-red-50 to-white border-b border-red-100 flex items-center justify-between gap-3">
             <PanelTitle
               icon={Flame}
               tone="bg-gradient-to-br from-red-500 to-rose-600"
               title={`High Priority ที่ยังค้าง (${highPending.length} เรื่อง)`}
-              hint="งานเร่งด่วนที่ต้องเสร็จทันกำหนด SIT"
+              hint="งานเร่งด่วนที่ต้องเสร็จทันกำหนด SIT · คลิกที่รายการเพื่อดูรายละเอียด"
+              onClick={() => onFilterByPriority('1.High')}
             />
-            <div className="flex items-center gap-1">
-              <button type="button" onClick={() => onFilterByPriority('1.High')} className="text-sm font-semibold text-red-700 hover:text-red-900 inline-flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-red-50">
-                ดูทั้งหมด <ArrowRight className="w-4 h-4" aria-hidden />
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onFilterByPriority('1.High')}
+                className="text-xs font-semibold text-red-700 hover:text-red-900 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 hover:bg-red-100/70 border border-red-200/80 transition-colors"
+              >
+                ดูทั้งหมด <ArrowRight className="w-3.5 h-3.5" aria-hidden />
               </button>
               <button
                 type="button"
                 onClick={() => setUrgentCollapsed((v) => !v)}
-                className="p-1.5 rounded-lg text-slate-500 hover:bg-white"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white/80 hover:bg-white border border-red-200/70 px-2 py-1 rounded-lg transition-colors"
                 aria-label={urgentCollapsed ? 'ขยาย' : 'ย่อ'}
                 aria-expanded={!urgentCollapsed}
               >
-                {urgentCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+                {urgentCollapsed ? (
+                  <>
+                    แสดง <ChevronDown className="w-3.5 h-3.5" />
+                  </>
+                ) : (
+                  <>
+                    ย่อ <ChevronUp className="w-3.5 h-3.5" />
+                  </>
+                )}
               </button>
             </div>
           </div>
           {!urgentCollapsed && (
-            <ul className="divide-y divide-red-50">
-              {highPending.map((r) => (
-                <li key={r.id}>
-                  <button type="button" onClick={() => onSelectRequirement(r)} className="w-full text-left px-4 py-3 hover:bg-red-50/50 transition-colors flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                    <span className="font-mono text-xs font-bold text-red-700 bg-red-100 border border-red-200 px-2.5 py-1 rounded-md">{r.req_id}</span>
-                    <span className="flex-1 min-w-[220px]">
-                      <span className="block font-semibold text-slate-900 truncate">{r.title}</span>
-                      <span className="block text-xs text-slate-500">
-                        {r.core_function} · {r.module}
-                      </span>
-                    </span>
-                    {r.info_requested && <NeedInfoBadge />}
-                    {r.dev_assigned && (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-full">
-                        <Code2 className="w-3.5 h-3.5" aria-hidden />
-                        {r.dev_assigned}
-                      </span>
-                    )}
-                    <StatusBadge status={r.status} />
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div>
+              {/* Compact Table Header */}
+              <div className="hidden md:grid md:grid-cols-12 gap-2 px-3.5 py-1.5 bg-red-50/70 border-b border-red-100 text-[11px] font-bold text-red-900">
+                <div className="col-span-2">Req ID / ระบบ</div>
+                <div className="col-span-2">โมดูล</div>
+                <div className="col-span-6">หัวข้อ Requirement</div>
+                <div className="col-span-1">Dev</div>
+                <div className="col-span-1 text-right">สถานะ</div>
+              </div>
+              <ul className="divide-y divide-red-50">
+                {highPending.map((r) => {
+                  const coreMeta = CORE_FUNCTION_META[r.core_function];
+                  return (
+                    <li key={r.id}>
+                      <button
+                        type="button"
+                        onClick={() => onSelectRequirement(r)}
+                        className="group w-full text-left px-3.5 py-1.5 hover:bg-red-50/60 transition-colors grid grid-cols-1 md:grid-cols-12 gap-1.5 md:gap-2 items-center text-xs"
+                      >
+                        {/* Req ID + Core Badge */}
+                        <div className="md:col-span-2 flex items-center justify-between md:justify-start gap-1.5 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-mono text-[11px] font-bold text-red-700 bg-red-100/90 group-hover:bg-red-600 group-hover:text-white border border-red-200 px-2 py-0.5 rounded transition-colors shrink-0">
+                              {r.req_id}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${coreMeta.badgeBg} ${coreMeta.badgeText} ${coreMeta.badgeBorder}`}
+                            >
+                              {coreMeta.shortName}
+                            </span>
+                          </div>
+                          <div className="md:hidden">
+                            <StatusBadge status={r.status} />
+                          </div>
+                        </div>
+
+                        {/* Sub-module */}
+                        <div className="md:col-span-2 flex items-center min-w-0">
+                          <span
+                            className="text-[11px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/80 truncate"
+                            title={r.module}
+                          >
+                            {r.module}
+                          </span>
+                        </div>
+
+                        {/* Single-line Requirement Title */}
+                        <div className="md:col-span-6 flex items-center gap-1.5 min-w-0">
+                          <span
+                            className="text-[13px] font-semibold text-slate-900 group-hover:text-red-950 truncate"
+                            title={r.title}
+                          >
+                            {r.title}
+                          </span>
+                          {r.info_requested && <NeedInfoBadge className="shrink-0" />}
+                        </div>
+
+                        {/* Dev */}
+                        <div className="hidden md:flex md:col-span-1 items-center min-w-0">
+                          {r.dev_assigned ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-800 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded truncate">
+                              <Code2 className="w-3 h-3 shrink-0" aria-hidden />
+                              <span className="truncate">{r.dev_assigned}</span>
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-slate-400">-</span>
+                          )}
+                        </div>
+
+                        {/* Status */}
+                        <div className="hidden md:flex md:col-span-1 items-center justify-end">
+                          <StatusBadge status={r.status} />
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
         </section>
       )}
