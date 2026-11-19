@@ -302,13 +302,13 @@ export default function PriorityListView({
                   <table className="w-full text-left border-collapse text-sm">
                     <thead>
                       <tr className="bg-slate-50 border-b border-line text-xs">
-                        <SortHeader label="Req ID" sortKey="req_id" sort={sort} onSort={onSort} className="w-32" />
-                        <SortHeader label="ระบบ / โมดูล" sortKey="module" sort={sort} onSort={onSort} className="w-56" />
-                        <SortHeader label="หัวข้อ" sortKey="title" sort={sort} onSort={onSort} className="min-w-[240px]" />
-                        <SortHeader label="สถานะ" sortKey="status" sort={sort} onSort={onSort} className="w-44" />
-                        <SortHeader label="Dev" sortKey="dev_assigned" sort={sort} onSort={onSort} className="w-32" />
-                        <SortHeader label="Tester · วันที่-เวลา" sortKey="request_date" sort={sort} onSort={onSort} className="w-48" />
-                        <th className="py-3 px-4 w-36 text-right font-semibold text-slate-600">รายละเอียด</th>
+                        <SortHeader label="Req ID" sortKey="req_id" sort={sort} onSort={onSort} className="w-28 whitespace-nowrap" />
+                        <SortHeader label="ระบบ / โมดูล" sortKey="module" sort={sort} onSort={onSort} className="w-48 whitespace-nowrap" />
+                        <SortHeader label="หัวข้อ" sortKey="title" sort={sort} onSort={onSort} className="w-[42%] min-w-[360px]" />
+                        <SortHeader label="สถานะ" sortKey="status" sort={sort} onSort={onSort} className="w-36 whitespace-nowrap" />
+                        <SortHeader label="Dev" sortKey="dev_assigned" sort={sort} onSort={onSort} className="w-28 whitespace-nowrap" />
+                        <SortHeader label="Tester · วันที่-เวลา" sortKey="request_date" sort={sort} onSort={onSort} className="w-40 whitespace-nowrap" />
+                        <th className="py-3 px-4 w-32 text-right font-semibold text-slate-600 whitespace-nowrap">รายละเอียด</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -341,9 +341,9 @@ export default function PriorityListView({
                                 </span>
                               </span>
                             </td>
-                            <td className="py-2 px-4">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="font-medium text-slate-900 truncate max-w-[360px]" title={req.title}>
+                            <td className="py-2.5 px-4">
+                              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                <span className="font-semibold text-slate-900 leading-snug break-words" title={req.title}>
                                   {req.title}
                                 </span>
                                 {needsInfo && <NeedInfoBadge className="shrink-0" />}

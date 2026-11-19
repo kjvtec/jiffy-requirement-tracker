@@ -520,14 +520,14 @@ export default function RequirementExplorerView({
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-line text-xs">
-                  <SortHeader label="Req ID" sortKey="req_id" sort={sort} onSort={onSort} className="w-32" />
-                  <SortHeader label="ระบบ / โมดูล" sortKey="module" sort={sort} onSort={onSort} className="w-44" />
-                  <SortHeader label="Priority" sortKey="priority" sort={sort} onSort={onSort} className="w-32" />
-                  <SortHeader label="สถานะ" sortKey="status" sort={sort} onSort={onSort} className="w-40" />
-                  <SortHeader label="หัวข้อ" sortKey="title" sort={sort} onSort={onSort} className="min-w-[260px]" />
-                  <SortHeader label="Dev" sortKey="dev_assigned" sort={sort} onSort={onSort} className="w-36" />
-                  <SortHeader label="Tester / วันที่-เวลา" sortKey="request_date" sort={sort} onSort={onSort} className="w-44" />
-                  <th className="py-3 px-4 text-right w-28 font-semibold text-slate-600">จัดการ</th>
+                  <SortHeader label="Req ID" sortKey="req_id" sort={sort} onSort={onSort} className="w-28 whitespace-nowrap" />
+                  <SortHeader label="ระบบ / โมดูล" sortKey="module" sort={sort} onSort={onSort} className="w-36 whitespace-nowrap" />
+                  <SortHeader label="Priority" sortKey="priority" sort={sort} onSort={onSort} className="w-24 whitespace-nowrap" />
+                  <SortHeader label="สถานะ" sortKey="status" sort={sort} onSort={onSort} className="w-32 whitespace-nowrap" />
+                  <SortHeader label="หัวข้อ" sortKey="title" sort={sort} onSort={onSort} className="w-[42%] min-w-[380px]" />
+                  <SortHeader label="Dev" sortKey="dev_assigned" sort={sort} onSort={onSort} className="w-28 whitespace-nowrap" />
+                  <SortHeader label="Tester / วันที่-เวลา" sortKey="request_date" sort={sort} onSort={onSort} className="w-36 whitespace-nowrap" />
+                  <th className="py-3 px-3 text-right w-24 font-semibold text-slate-600 whitespace-nowrap">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -569,12 +569,15 @@ export default function RequirementExplorerView({
                       <td className="py-3 px-4 align-top">
                         <StatusBadge status={req.status} showThai />
                       </td>
-                      <td className="py-3 px-4 align-top">
-                        <div className="font-semibold text-slate-900 group-hover:text-jiffy-blue transition-colors line-clamp-1">
+                      <td className="py-3.5 px-4 align-top">
+                        <div
+                          className="text-[15px] font-bold text-slate-900 group-hover:text-jiffy-blue transition-colors leading-snug break-words"
+                          title={req.title}
+                        >
                           {req.title}
                         </div>
                         {req.details && (
-                          <p className="text-slate-600 line-clamp-2 text-xs leading-relaxed mt-0.5">{req.details}</p>
+                          <p className="text-slate-500 line-clamp-2 text-xs leading-relaxed mt-1">{req.details}</p>
                         )}
                         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                           {needsInfo && <NeedInfoBadge />}
