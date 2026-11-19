@@ -226,6 +226,7 @@ export interface RequirementFilter {
   search: string;
   status: string;
   priority: string;
+  type: string;
   core_function: string;
   module: string;
   requested_by: string;
@@ -238,6 +239,7 @@ export const EMPTY_FILTER: RequirementFilter = {
   search: '',
   status: '',
   priority: '',
+  type: '',
   core_function: '',
   module: '',
   requested_by: '',

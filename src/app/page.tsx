@@ -277,6 +277,7 @@ export default function HomePage() {
                 onFilterByModule={(mod, core) => goExplorer({}, (core as CoreFunctionType) || DEFAULT_CORE_FUNCTION, mod)}
                 onFilterByStatus={(status) => goExplorer({ status })}
                 onFilterByPriority={(priority) => goExplorer({ priority })}
+                onFilterByType={(type) => goExplorer({ type })}
                 onFilterByDev={(dev_assigned) => goExplorer({ dev_assigned })}
                 onFilterNeedsInfo={() => goExplorer({ needs_info: true })}
                 onGoToTable={() => goExplorer({})}

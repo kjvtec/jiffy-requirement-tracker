@@ -45,6 +45,7 @@ interface DashboardViewProps {
   onSelectCoreFunction: (coreFunction: CoreFunctionType) => void;
   onFilterByStatus: (statusName: string) => void;
   onFilterByPriority: (priorityName: string) => void;
+  onFilterByType: (typeName: string) => void;
   onFilterByDev: (devName: string) => void;
   onFilterNeedsInfo: () => void;
   onGoToTable: () => void;
@@ -113,7 +114,39 @@ function Kpi({
   );
 }
 
-function PanelTitle({ icon: Icon, tone, title, hint }: { icon: LucideIcon; tone: string; title: string; hint?: string }) {
+function PanelTitle({
+  icon: Icon,
+  tone,
+  title,
+  hint,
+  onClick,
+}: {
+  icon: LucideIcon;
+  tone: string;
+  title: string;
+  hint?: string;
+  onClick?: () => void;
+}) {
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="group flex items-center gap-3 text-left rounded-lg -m-1 p-1 hover:bg-slate-50 transition-colors"
+      >
+        <span className={`h-9 w-9 rounded-xl text-white flex items-center justify-center shadow-card transition-transform group-hover:scale-105 ${tone}`}>
+          <Icon className="w-5 h-5" aria-hidden />
+        </span>
+        <div>
+          <h3 className="text-base font-bold text-jiffy-ink group-hover:text-jiffy-blue group-hover:underline leading-tight inline-flex items-center gap-1.5 transition-colors">
+            {title}
+            <ArrowRight className="w-4 h-4 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-jiffy-blue" aria-hidden />
+          </h3>
+          {hint && <p className="text-xs text-slate-500">{hint}</p>}
+        </div>
+      </button>
+    );
+  }
   return (
     <div className="flex items-center gap-3">
       <span className={`h-9 w-9 rounded-xl text-white flex items-center justify-center shadow-card ${tone}`}>
@@ -145,6 +178,7 @@ export default function DashboardView({
   onSelectCoreFunction,
   onFilterByStatus,
   onFilterByPriority,
+  onFilterByType,
   onFilterByDev,
   onFilterNeedsInfo,
   onGoToTable,
@@ -642,17 +676,29 @@ export default function DashboardView({
 
         {/* Type + priority */}
         <section className="card p-4 sm:p-5 space-y-4" aria-label="ประเภทและความเร่งด่วน">
-          <PanelTitle icon={PieChart} tone="bg-gradient-to-br from-fuchsia-400 to-pink-600" title="ประเภท Requirement & ความเร่งด่วน" hint="จำแนกตามประเภทและ Priority" />
-          <ul className="space-y-2.5">
+          <PanelTitle icon={PieChart} tone="bg-gradient-to-br from-fuchsia-400 to-pink-600" title="ประเภท Requirement & ความเร่งด่วน" hint="คลิกหัวเรื่องประเภทหรือ Priority เพื่อดูรายการที่เกี่ยวข้อง" onClick={onGoToTable} />
+          <ul className="space-y-1.5">
             {typeDistribution.map((t, i) => (
               <li key={t.type}>
-                <div className="flex justify-between text-sm">
-                  <span className="font-medium text-slate-700">{t.type}</span>
-                  <span className="text-slate-500">{t.count} เรื่อง ({t.percent}%)</span>
-                </div>
-                <div className="mt-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-500 ${TYPE_BAR[i % TYPE_BAR.length]}`} style={{ width: `${t.percent}%` }} />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onFilterByType(t.type)}
+                  title={`คลิกเพื่อดูรายการประเภท ${t.type} (${t.count} เรื่อง)`}
+                  className="group w-full text-left rounded-lg px-2 py-1.5 -mx-2 hover:bg-fuchsia-50/70 transition-all"
+                >
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-700 group-hover:text-jiffy-blue group-hover:underline inline-flex items-center gap-1.5 transition-colors">
+                      {t.type}
+                      <ArrowRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-jiffy-blue" aria-hidden />
+                    </span>
+                    <span className="text-slate-500 group-hover:text-slate-800 font-medium transition-colors">
+                      {t.count} เรื่อง ({t.percent}%)
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${TYPE_BAR[i % TYPE_BAR.length]}`} style={{ width: `${t.percent}%` }} />
+                  </div>
+                </button>
               </li>
             ))}
           </ul>

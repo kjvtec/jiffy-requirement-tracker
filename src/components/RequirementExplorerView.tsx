@@ -27,6 +27,7 @@ import {
 import {
   CORE_FUNCTIONS,
   CORE_FUNCTION_META,
+  REQUIREMENT_TYPES,
   type CoreFunctionType,
   type Developer,
   type Requirement,
@@ -104,6 +105,7 @@ export default function RequirementExplorerView({
       }
       if (filter.status && r.status !== filter.status) return false;
       if (filter.priority && r.priority !== filter.priority) return false;
+      if (filter.type && r.type !== filter.type) return false;
       if (filter.dev_assigned && r.dev_assigned !== filter.dev_assigned) return false;
       if (filter.requested_by && r.requested_by !== filter.requested_by) return false;
       if (filter.needs_info && !(r.info_requested && r.status !== 'Done')) return false;
@@ -144,7 +146,13 @@ export default function RequirementExplorerView({
   }, [modules, requirements, filtered, selectedCore]);
 
   const hasActiveFilters = Boolean(
-    filter.search || filter.status || filter.priority || filter.dev_assigned || filter.requested_by || filter.needs_info
+    filter.search ||
+      filter.status ||
+      filter.priority ||
+      filter.type ||
+      filter.dev_assigned ||
+      filter.requested_by ||
+      filter.needs_info
   );
 
   const clearFilters = () =>
@@ -153,6 +161,7 @@ export default function RequirementExplorerView({
       core_function: '',
       status: '',
       priority: '',
+      type: '',
       module: '',
       requested_by: '',
       dev_assigned: '',
@@ -241,6 +250,19 @@ export default function RequirementExplorerView({
             <option value="1.High">1.High</option>
             <option value="2.Medium">2.Medium</option>
             <option value="3.Low">3.Low</option>
+          </select>
+          <select
+            value={filter.type}
+            onChange={(e) => onFilterChange((prev) => ({ ...prev, type: e.target.value }))}
+            aria-label="กรองตามประเภท Requirement"
+            className={selectCls}
+          >
+            <option value="">ทุกประเภท</option>
+            {REQUIREMENT_TYPES.map((typeName) => (
+              <option key={typeName} value={typeName}>
+                {typeName}
+              </option>
+            ))}
           </select>
           <select
             value={filter.dev_assigned}
